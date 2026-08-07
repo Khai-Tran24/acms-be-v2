@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  NestInterceptor,
+  StreamableFile,
+} from '@nestjs/common';
 import type { Response as ExpressResponse } from 'express';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -24,6 +29,11 @@ export class TransformInterceptor<T> implements NestInterceptor<
 
     return next.handle().pipe(
       map((data: T) => {
+        // Nest must receive StreamableFile directly so it can pipe binary
+        // responses instead of serializing them into the JSON envelope.
+        if (data instanceof StreamableFile)
+          return data as unknown as Response<T>;
+
         let message = response.message || 'Request successful';
         let responseData: T | null = data ?? null;
 

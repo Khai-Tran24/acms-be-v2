@@ -4,7 +4,6 @@ import { ContractModule } from './contract/contract.module';
 import { UserModule } from './user/user.module';
 import { RoleModule } from './role/role.module';
 import { PermissionModule } from './permission/permission.module';
-import { FileModule } from './file/file.module';
 import { ConfigurationModule } from './configuration/configuration.module';
 import { LoggerModule } from 'nestjs-pino';
 import { loggerConfig } from './config';
@@ -43,7 +42,6 @@ import { AnnouncementModule } from './announcement/announcement.module';
     UserModule,
     RoleModule,
     PermissionModule,
-    FileModule,
     ConfigurationModule,
     AnalyticModule,
     PropertyModule,

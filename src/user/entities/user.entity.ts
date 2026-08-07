@@ -8,11 +8,10 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Contract } from '../../contract/entities/contract.entity';
-import { File } from '../../file/entities/file.entity';
 
 @Entity()
 export class User {
-  @PrimaryGeneratedColumn({ name: 'user_id' })
+  @PrimaryGeneratedColumn()
   id!: number;
 
   @Column({ unique: true })
@@ -83,9 +82,6 @@ export class User {
 
   @OneToMany(() => Contract, (contract) => contract.createdBy)
   createdContracts!: Contract[];
-
-  @OneToMany(() => File, (file) => file.uploadedBy)
-  uploadedFiles!: File[];
 
   @Column({ nullable: true })
   phone!: string;
