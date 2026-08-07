@@ -10,6 +10,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { Role } from 'src/shared/enums/role.enum';
 
 export const USER_SORT_FIELDS = [
   'id',
@@ -64,10 +65,9 @@ export class QueryUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  roleId?: number;
+  @Type(() => String)
+  @IsString()
+  role?: Role;
 
   @ApiPropertyOptional()
   @IsOptional()

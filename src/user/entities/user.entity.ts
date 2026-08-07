@@ -1,13 +1,6 @@
-import { Role } from '../../role/entities/role.entity';
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Contract } from '../../contract/entities/contract.entity';
+import { Role } from 'src/shared/enums/role.enum';
 
 @Entity()
 export class User {
@@ -31,6 +24,14 @@ export class User {
 
   @Column({ name: 'is_active', default: false })
   isActive!: boolean;
+
+  @Column({
+    name: 'role',
+    type: 'enum',
+    enum: Role,
+    default: Role.CHUYEN_VIEN,
+  })
+  role!: Role;
 
   @Column({
     type: 'varchar',
@@ -69,13 +70,6 @@ export class User {
     nullable: true,
   })
   passwordResetOtpExpiresAt!: Date | null;
-
-  @ManyToOne(() => Role, (role) => role.id, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'role_id' })
-  role!: Role | null;
 
   @OneToMany(() => Contract, (contract) => contract.assignedTo)
   assignedContracts!: Contract[];

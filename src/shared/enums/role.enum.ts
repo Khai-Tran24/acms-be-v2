@@ -1,0 +1,7 @@
+export enum Role {
+  ADMIN = 'ADMIN',
+  DAU_GIA_VIEN = 'DAU_GIA_VIEN',
+  THU_KY = 'THU_KY',
+  CHUYEN_VIEN = 'CHUYEN_VIEN',
+  NHAN_VIEN_LUU_TRU = 'NHAN_VIEN_LUU_TRU',
+}

@@ -1,7 +1,8 @@
+import { Role } from 'src/shared/enums/role.enum';
+
 export interface AuthUser {
   id: number;
   email: string;
   username: string;
-  role: string | null;
-  permissions: string[];
+  role: Role;
 }

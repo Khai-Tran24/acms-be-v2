@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes, scrypt as scryptCallback } from 'crypto';
-import { Role } from '../role/entities/role.entity';
 import { ILike, Repository } from 'typeorm';
 import { promisify } from 'util';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -20,13 +19,10 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
-    const { role: roleId, password, ...userData } = createUserDto;
-    const role = await this.findRole(roleId);
+    const { role, password, ...userData } = createUserDto;
 
     try {
       const user = await this.userRepository.save(
@@ -51,7 +47,7 @@ export class UserService {
       username,
       email,
       isActive,
-      roleId,
+      role,
       createdFrom,
       createdTo,
       sortBy,
@@ -73,7 +69,7 @@ export class UserService {
     if (isActive !== undefined) {
       builder.andWhere('user.is_active = :isActive', { isActive });
     }
-    if (roleId) builder.andWhere('role.id = :roleId', { roleId });
+    if (role) builder.andWhere('role.name = :role', { role });
     if (createdFrom) {
       builder.andWhere('user.created_at >= :createdFrom', { createdFrom });
     }
@@ -105,7 +101,6 @@ export class UserService {
   async findOne(id: number) {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: { role: true },
     });
     if (!user) throw new NotFoundException('User not found');
     return this.toResponse(user);
@@ -115,12 +110,11 @@ export class UserService {
     const user = await this.userRepository.findOneBy({ id });
     if (!user) throw new NotFoundException('User not found');
 
-    const { role: roleId, password, ...userData } = updateUserDto;
+    const { password, ...userData } = updateUserDto;
     Object.assign(user, userData);
     if (password !== undefined) {
       user.password = await this.hashPassword(password);
     }
-    if (roleId !== undefined) user.role = await this.findRole(roleId);
 
     try {
       const saved = await this.userRepository.save(user);
@@ -135,12 +129,6 @@ export class UserService {
     const result = await this.userRepository.delete(id);
     if (!result.affected) throw new NotFoundException('User not found');
     return { id, deleted: true };
-  }
-
-  private async findRole(id: number) {
-    const role = await this.roleRepository.findOneBy({ id });
-    if (!role) throw new NotFoundException('Role not found');
-    return role;
   }
 
   private async hashPassword(password: string): Promise<string> {

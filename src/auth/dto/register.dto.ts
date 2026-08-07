@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
-  IsInt,
   IsOptional,
   IsString,
   Min,
@@ -9,6 +8,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Role } from 'src/shared/enums/role.enum';
 
 export class RegisterDto {
   @ApiProperty() @IsString() @MaxLength(100) username!: string;
@@ -23,10 +23,10 @@ export class RegisterDto {
     example: 2,
   })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
+  @Type(() => String)
+  @IsString()
   @Min(1)
-  role?: number;
+  role?: Role;
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()

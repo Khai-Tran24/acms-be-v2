@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,7 +15,6 @@ import {
 import { promisify } from 'util';
 import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
-import { Role } from '../role/entities/role.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import {
@@ -33,7 +31,6 @@ const scrypt = promisify(scryptCallback);
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
-    @InjectRepository(Role) private readonly roles: Repository<Role>,
     private readonly jwt: JwtService,
     private readonly mailer: MailerService,
   ) {}
@@ -48,7 +45,6 @@ export class AuthService {
       throw new ConflictException(
         'A user with this email or username already exists',
       );
-    const role = await this.registrationRole(dto.role);
     const otp = this.newOtp();
     const userDetails = { ...dto };
     delete userDetails.role;
@@ -57,7 +53,6 @@ export class AuthService {
       email,
       username,
       password: await this.hashSecret(dto.password),
-      role,
       isActive: false,
       emailVerificationOtpHash: this.hashOtp(otp),
       emailVerificationOtpExpiresAt: this.otpExpiry(),
@@ -222,10 +217,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       username: user.username,
-      role: user.role?.roleName ?? null,
-      permissions: (user.role?.rolePermissions ?? [])
-        .filter(({ permission }) => permission?.isActive)
-        .map(({ permission }) => permission.permissionName),
+      role: user.role,
     };
   }
 
@@ -243,48 +235,6 @@ export class AuthService {
       .leftJoinAndSelect('rolePermissions.permission', 'permission')
       .where('LOWER(user.email) = LOWER(:email)', { email })
       .getOne();
-  }
-
-  private async defaultRole() {
-    const name = process.env.AUTH_DEFAULT_ROLE ?? 'user';
-    let role = await this.roles.findOne({
-      where: { roleName: name, isActive: true },
-    });
-    if (!role) {
-      try {
-        role = await this.roles.save(
-          this.roles.create({
-            roleName: name,
-            roleDescription: 'Default self-registered user role',
-            isActive: true,
-          }),
-        );
-      } catch {
-        role = await this.roles.findOne({
-          where: { roleName: name, isActive: true },
-        });
-      }
-    }
-    if (!role)
-      throw new NotFoundException(
-        'Default registration role is not configured',
-      );
-    return role;
-  }
-
-  private async registrationRole(roleId?: number) {
-    if (roleId === undefined) return this.defaultRole();
-
-    const role = await this.roles.findOne({
-      where: { id: roleId, isActive: true },
-    });
-    if (!role) throw new NotFoundException('Active role not found');
-    if (role.roleName.trim().toLowerCase() === 'admin') {
-      throw new BadRequestException(
-        'The admin role cannot be selected during registration',
-      );
-    }
-    return role;
   }
 
   private newOtp() {
