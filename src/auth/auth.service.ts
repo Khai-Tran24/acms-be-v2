@@ -2,21 +2,15 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
-import {
-  createHash,
-  randomBytes,
-  scrypt as scryptCallback,
-  timingSafeEqual,
-} from 'crypto';
-import { promisify } from 'util';
+import { randomBytes } from 'crypto';
 import { Repository } from 'typeorm';
+import { compareWithBcrypt, hashWithBcrypt } from '../shared/utils/bcrypt.util';
+import { compareWithSha256, hashWithSha256 } from '../shared/utils/crypto.util';
 import { User } from '../user/entities/user.entity';
-import { Role } from '../role/entities/role.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import {
@@ -27,13 +21,10 @@ import {
 import { AuthUser } from './types/auth-user.type';
 import { MailerService } from './mailer.service';
 
-const scrypt = promisify(scryptCallback);
-
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
-    @InjectRepository(Role) private readonly roles: Repository<Role>,
     private readonly jwt: JwtService,
     private readonly mailer: MailerService,
   ) {}
@@ -48,18 +39,15 @@ export class AuthService {
       throw new ConflictException(
         'A user with this email or username already exists',
       );
-    const role = await this.registrationRole(dto.role);
     const otp = this.newOtp();
     const userDetails = { ...dto };
-    delete userDetails.role;
     const user = this.users.create({
       ...userDetails,
       email,
       username,
-      password: await this.hashSecret(dto.password),
-      role,
+      password: await hashWithBcrypt(dto.password),
       isActive: false,
-      emailVerificationOtpHash: this.hashOtp(otp),
+      emailVerificationOtpHash: await hashWithBcrypt(otp),
       emailVerificationOtpExpiresAt: this.otpExpiry(),
     });
     try {
@@ -82,7 +70,7 @@ export class AuthService {
     const user = await this.findUserWithSecrets(dto.email);
     if (!user)
       throw new BadRequestException('Invalid or expired verification code');
-    this.verifyOtp(
+    await this.verifyOtp(
       dto.otp,
       user.emailVerificationOtpHash,
       user.emailVerificationOtpExpiresAt,
@@ -99,7 +87,7 @@ export class AuthService {
     const user = await this.findUserWithSecrets(email);
     if (user && !user.isActive) {
       const otp = this.newOtp();
-      user.emailVerificationOtpHash = this.hashOtp(otp);
+      user.emailVerificationOtpHash = await hashWithBcrypt(otp);
       user.emailVerificationOtpExpiresAt = this.otpExpiry();
       await this.users.save(user);
       await this.mailer.sendOtp(user.email, otp, 'verify-email');
@@ -111,7 +99,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.findUserWithSecrets(dto.email);
-    if (!user || !(await this.verifySecret(dto.password, user.password))) {
+    if (!user || !(await compareWithBcrypt(dto.password, user.password))) {
       throw new UnauthorizedException('Invalid email or password');
     }
     if (!user.isActive)
@@ -133,16 +121,13 @@ export class AuthService {
     const user = await this.users
       .createQueryBuilder('user')
       .addSelect(['user.refreshTokenHash'])
-      .leftJoinAndSelect('user.role', 'role')
-      .leftJoinAndSelect('role.rolePermissions', 'rolePermissions')
-      .leftJoinAndSelect('rolePermissions.permission', 'permission')
       .where('user.id = :id', { id: payload.sub })
       .getOne();
     if (
       !user ||
       !user.isActive ||
       !user.refreshTokenHash ||
-      !(await this.verifySecret(refreshToken, user.refreshTokenHash))
+      !compareWithSha256(refreshToken, user.refreshTokenHash)
     ) {
       throw new UnauthorizedException('Refresh token is invalid or revoked');
     }
@@ -167,7 +152,7 @@ export class AuthService {
     const user = await this.findUserWithSecrets(dto.email);
     if (user?.isActive) {
       const otp = this.newOtp();
-      user.passwordResetOtpHash = this.hashOtp(otp);
+      user.passwordResetOtpHash = await hashWithBcrypt(otp);
       user.passwordResetOtpExpiresAt = this.otpExpiry();
       await this.users.save(user);
       await this.mailer.sendOtp(user.email, otp, 'reset-password');
@@ -182,13 +167,13 @@ export class AuthService {
     const user = await this.findUserWithSecrets(dto.email);
     if (!user)
       throw new BadRequestException('Invalid or expired password reset code');
-    this.verifyOtp(
+    await this.verifyOtp(
       dto.otp,
       user.passwordResetOtpHash,
       user.passwordResetOtpExpiresAt,
       'Invalid or expired password reset code',
     );
-    user.password = await this.hashSecret(dto.newPassword);
+    user.password = await hashWithBcrypt(dto.newPassword);
     user.passwordResetOtpHash = null;
     user.passwordResetOtpExpiresAt = null;
     user.refreshTokenHash = null;
@@ -212,7 +197,7 @@ export class AuthService {
         ),
       },
     );
-    user.refreshTokenHash = await this.hashSecret(refreshToken);
+    user.refreshTokenHash = hashWithSha256(refreshToken);
     await this.users.save(user);
     return { accessToken, refreshToken, user: identity };
   }
@@ -222,10 +207,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       username: user.username,
-      role: user.role?.roleName ?? null,
-      permissions: (user.role?.rolePermissions ?? [])
-        .filter(({ permission }) => permission?.isActive)
-        .map(({ permission }) => permission.permissionName),
+      role: user.role,
     };
   }
 
@@ -238,95 +220,33 @@ export class AuthService {
         'user.emailVerificationOtpHash',
         'user.passwordResetOtpHash',
       ])
-      .leftJoinAndSelect('user.role', 'role')
-      .leftJoinAndSelect('role.rolePermissions', 'rolePermissions')
-      .leftJoinAndSelect('rolePermissions.permission', 'permission')
       .where('LOWER(user.email) = LOWER(:email)', { email })
       .getOne();
   }
 
-  private async defaultRole() {
-    const name = process.env.AUTH_DEFAULT_ROLE ?? 'user';
-    let role = await this.roles.findOne({
-      where: { roleName: name, isActive: true },
-    });
-    if (!role) {
-      try {
-        role = await this.roles.save(
-          this.roles.create({
-            roleName: name,
-            roleDescription: 'Default self-registered user role',
-            isActive: true,
-          }),
-        );
-      } catch {
-        role = await this.roles.findOne({
-          where: { roleName: name, isActive: true },
-        });
-      }
-    }
-    if (!role)
-      throw new NotFoundException(
-        'Default registration role is not configured',
-      );
-    return role;
-  }
-
-  private async registrationRole(roleId?: number) {
-    if (roleId === undefined) return this.defaultRole();
-
-    const role = await this.roles.findOne({
-      where: { id: roleId, isActive: true },
-    });
-    if (!role) throw new NotFoundException('Active role not found');
-    if (role.roleName.trim().toLowerCase() === 'admin') {
-      throw new BadRequestException(
-        'The admin role cannot be selected during registration',
-      );
-    }
-    return role;
-  }
-
   private newOtp() {
     return randomBytes(4).readUInt32BE(0).toString().padStart(6, '0').slice(-6);
-  }
-  private hashOtp(otp: string) {
-    return createHash('sha256').update(otp).digest('hex');
   }
   private otpExpiry() {
     return new Date(
       Date.now() + Number(process.env.OTP_EXPIRES_MINUTES ?? 10) * 60_000,
     );
   }
-  private verifyOtp(
+  private async verifyOtp(
     otp: string,
     hash: string | null,
     expiresAt: Date | null,
     message: string,
   ) {
-    const candidate = Buffer.from(this.hashOtp(otp));
-    const stored = hash ? Buffer.from(hash) : null;
     if (
-      !stored ||
+      !hash ||
       !expiresAt ||
       expiresAt.getTime() < Date.now() ||
-      stored.length !== candidate.length ||
-      !timingSafeEqual(candidate, stored)
+      !(await compareWithBcrypt(otp, hash))
     )
       throw new BadRequestException(message);
   }
-  private async hashSecret(secret: string) {
-    const salt = randomBytes(16).toString('base64');
-    const key = (await scrypt(secret, salt, 64)) as Buffer;
-    return `scrypt$${salt}$${key.toString('base64')}`;
-  }
-  private async verifySecret(secret: string, stored: string) {
-    const [scheme, salt, hash] = stored.split('$');
-    if (scheme !== 'scrypt' || !salt || !hash) return false;
-    const key = (await scrypt(secret, salt, 64)) as Buffer;
-    const expected = Buffer.from(hash, 'base64');
-    return expected.length === key.length && timingSafeEqual(key, expected);
-  }
+
   private accessSecret() {
     if (!process.env.JWT_ACCESS_SECRET)
       throw new Error('JWT_ACCESS_SECRET must be set');

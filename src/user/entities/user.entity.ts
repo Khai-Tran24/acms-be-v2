@@ -1,18 +1,10 @@
-import { Role } from '../../role/entities/role.entity';
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Contract } from '../../contract/entities/contract.entity';
-import { File } from '../../file/entities/file.entity';
+import { Role } from '../../shared/enums/role.enum';
 
 @Entity()
 export class User {
-  @PrimaryGeneratedColumn({ name: 'user_id' })
+  @PrimaryGeneratedColumn()
   id!: number;
 
   @Column({ unique: true })
@@ -32,6 +24,14 @@ export class User {
 
   @Column({ name: 'is_active', default: false })
   isActive!: boolean;
+
+  @Column({
+    name: 'role',
+    type: 'enum',
+    enum: Role,
+    default: Role.CHUYEN_VIEN,
+  })
+  role!: Role;
 
   @Column({
     type: 'varchar',
@@ -71,21 +71,11 @@ export class User {
   })
   passwordResetOtpExpiresAt!: Date | null;
 
-  @ManyToOne(() => Role, (role) => role.id, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'role_id' })
-  role!: Role | null;
-
   @OneToMany(() => Contract, (contract) => contract.assignedTo)
   assignedContracts!: Contract[];
 
   @OneToMany(() => Contract, (contract) => contract.createdBy)
   createdContracts!: Contract[];
-
-  @OneToMany(() => File, (file) => file.uploadedBy)
-  uploadedFiles!: File[];
 
   @Column({ nullable: true })
   phone!: string;

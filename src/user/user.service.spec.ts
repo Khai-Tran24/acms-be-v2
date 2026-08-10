@@ -45,6 +45,6 @@ describe('UserService', () => {
 
     const savedUser = userRepository.save.mock.calls[0][0];
     expect(savedUser.password).not.toBe('plain-text-password');
-    expect(savedUser.password).toMatch(/^scrypt\$[^$]+\$[^$]+$/);
+    expect(savedUser.password).toMatch(/^\$2[aby]\$/);
   });
 });

@@ -2,12 +2,13 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsEmail,
-  IsInt,
+  IsEnum,
   IsOptional,
   IsString,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { Role } from '../../shared/enums/role.enum';
 
 export class CreateUserDto {
   @ApiProperty()
@@ -36,8 +37,8 @@ export class CreateUserDto {
   isActive!: boolean;
 
   @ApiProperty()
-  @IsInt()
-  role!: number;
+  @IsEnum(Role)
+  role!: Role;
 
   @ApiProperty()
   @IsOptional()

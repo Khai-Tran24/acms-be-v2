@@ -4,9 +4,10 @@ import { Announcement } from './entities/announcement.entity';
 import { Contract } from '../contract/entities/contract.entity';
 import { AnnouncementController } from './announcement.controller';
 import { AnnouncementService } from './announcement.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Announcement, Contract])],
+  imports: [AuthModule, TypeOrmModule.forFeature([Announcement, Contract])],
   controllers: [AnnouncementController],
   providers: [AnnouncementService],
   exports: [TypeOrmModule],

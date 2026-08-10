@@ -128,16 +128,27 @@ Run `script.sql` against a fresh PostgreSQL database to create the baseline
 schema. `DB_SYNCHRONIZE` defaults to disabled because automatic schema changes
 are unsafe outside disposable local databases.
 
-### S3 files
+### S3 / MinIO files
 
-The API stores only S3 metadata: `bucket`, `object_key`, original name, MIME
-type, byte size, ETag, uploader, and the attached `entity_type/entity_id`.
-Binary content belongs in a private S3 bucket. A typical upload flow is:
+File bytes are stored in S3-compatible object storage and their metadata is
+stored in PostgreSQL. Configure AWS S3 with the normal AWS credential provider
+chain, or configure the local MinIO container with:
 
-1. The backend creates a presigned S3 upload URL.
-2. The client uploads directly to S3.
-3. After S3 confirms the upload, create the `/file` metadata record.
-4. Downloads use short-lived presigned URLs; never persist presigned URLs.
+```env
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=demo-1
+AWS_S3_ENDPOINT=http://localhost:9000
+AWS_S3_FORCE_PATH_STYLE=true
+AWS_ACCESS_KEY_ID=admin
+AWS_SECRET_ACCESS_KEY=admin123
+FILE_MAX_SIZE_BYTES=26214400
+```
+
+Create `demo-1` in the MinIO console at `http://localhost:9001` before the
+first upload. In Swagger, `POST /file` accepts `multipart/form-data` and shows
+a file chooser. `GET /file/:id/download` streams the object, `PATCH /file/:id`
+assigns it to an entity, and `DELETE /file/:id` removes both the object and its
+database metadata.
 
 `entity_type/entity_id` is intentionally polymorphic, so PostgreSQL cannot
 apply one foreign key to it. Service-level validation should restrict

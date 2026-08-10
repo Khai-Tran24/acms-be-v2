@@ -3,6 +3,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsIn,
   IsInt,
   IsOptional,
@@ -10,16 +11,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
-
-export const USER_SORT_FIELDS = [
-  'id',
-  'username',
-  'email',
-  'fullName',
-  'isActive',
-  'createdAt',
-  'updatedAt',
-] as const;
+import { Role } from '../../shared/enums/role.enum';
 
 export class QueryUserDto {
   @IsOptional()
@@ -27,7 +19,7 @@ export class QueryUserDto {
   @ApiPropertyOptional()
   @IsInt()
   @Min(1)
-  page = 1;
+  page: number = 1;
 
   @IsOptional()
   @Type(() => Number)
@@ -35,7 +27,7 @@ export class QueryUserDto {
   @IsInt()
   @Min(1)
   @Max(100)
-  limit = 20;
+  limit: number = 20;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -64,10 +56,9 @@ export class QueryUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  roleId?: number;
+  @Type(() => String)
+  @IsEnum(Role)
+  role?: Role;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -81,8 +72,9 @@ export class QueryUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsIn(USER_SORT_FIELDS)
-  sortBy: (typeof USER_SORT_FIELDS)[number] = 'createdAt';
+  @IsIn(['id', 'username', 'email', 'fullName', 'isActive', 'createdAt'])
+  sortBy: 'id' | 'username' | 'email' | 'fullName' | 'isActive' | 'createdAt' =
+    'createdAt';
 
   @ApiPropertyOptional()
   @IsOptional()
