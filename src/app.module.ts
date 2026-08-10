@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { ContractModule } from './contract/contract.module';
 import { UserModule } from './user/user.module';
-import { ConfigurationModule } from './configuration/configuration.module';
 import { LoggerModule } from 'nestjs-pino';
 import { loggerConfig } from './config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -38,7 +37,6 @@ import { AnnouncementModule } from './announcement/announcement.module';
     AuthModule,
     ContractModule,
     UserModule,
-    ConfigurationModule,
     AnalyticModule,
     PropertyModule,
     RegulationModule,

@@ -1,4 +1,4 @@
-import { Role } from 'src/shared/enums/role.enum';
+import { Role } from '../../shared/enums/role.enum';
 
 export interface AuthUser {
   id: number;

@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
+  IsEnum,
   IsOptional,
   IsString,
-  Min,
   MaxLength,
   MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Role } from 'src/shared/enums/role.enum';
+import { Role } from '../../shared/enums/role.enum';
 
 export class RegisterDto {
   @ApiProperty() @IsString() @MaxLength(100) username!: string;
@@ -16,16 +16,13 @@ export class RegisterDto {
   @ApiProperty() @IsString() @MinLength(8) @MaxLength(128) password!: string;
   @ApiProperty() @IsString() @MaxLength(255) fullName!: string;
   @ApiProperty({
-    required: false,
-    type: Number,
-    description:
-      'ID of the active role to assign. Uses the default role when omitted.',
-    example: 2,
+    required: true,
+    enum: Role,
+    enumName: 'Role',
   })
   @IsOptional()
   @Type(() => String)
-  @IsString()
-  @Min(1)
+  @IsEnum(Role)
   role?: Role;
   @ApiProperty({ required: false })
   @IsOptional()

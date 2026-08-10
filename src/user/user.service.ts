@@ -4,15 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { randomBytes, scrypt as scryptCallback } from 'crypto';
 import { ILike, Repository } from 'typeorm';
-import { promisify } from 'util';
+import { hashWithBcrypt } from '../shared/utils/bcrypt.util';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
-
-const scrypt = promisify(scryptCallback);
 
 @Injectable()
 export class UserService {
@@ -28,7 +25,7 @@ export class UserService {
       const user = await this.userRepository.save(
         this.userRepository.create({
           ...userData,
-          password: await this.hashPassword(password),
+          password: await hashWithBcrypt(password),
           role,
         }),
       );
@@ -53,9 +50,7 @@ export class UserService {
       sortBy,
       sortOrder,
     } = query;
-    const builder = this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role');
+    const builder = this.userRepository.createQueryBuilder('user');
 
     if (search) {
       const term = `%${search}%`;
@@ -69,7 +64,7 @@ export class UserService {
     if (isActive !== undefined) {
       builder.andWhere('user.is_active = :isActive', { isActive });
     }
-    if (role) builder.andWhere('role.name = :role', { role });
+    if (role) builder.andWhere('user.role = :role', { role });
     if (createdFrom) {
       builder.andWhere('user.created_at >= :createdFrom', { createdFrom });
     }
@@ -113,7 +108,7 @@ export class UserService {
     const { password, ...userData } = updateUserDto;
     Object.assign(user, userData);
     if (password !== undefined) {
-      user.password = await this.hashPassword(password);
+      user.password = await hashWithBcrypt(password);
     }
 
     try {
@@ -129,12 +124,6 @@ export class UserService {
     const result = await this.userRepository.delete(id);
     if (!result.affected) throw new NotFoundException('User not found');
     return { id, deleted: true };
-  }
-
-  private async hashPassword(password: string): Promise<string> {
-    const salt = randomBytes(16).toString('base64');
-    const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
-    return `scrypt$${salt}$${derivedKey.toString('base64')}`;
   }
 
   private toColumnName(sortBy: QueryUserDto['sortBy']) {

@@ -15,33 +15,34 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../shared/enums/role.enum';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('user')
-@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @Permissions('users.create')
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
 
   @Get()
-  @Permissions('users.read')
   findAll(@Query() query: QueryUserDto) {
     return this.userService.findAll(query);
   }
 
   @Get(':id')
-  @Permissions('users.read')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.userService.findOne(id);
   }
 
   @Patch(':id')
-  @Permissions('users.update')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
@@ -50,7 +51,6 @@ export class UserController {
   }
 
   @Delete(':id')
-  @Permissions('users.delete')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.userService.remove(id);
   }

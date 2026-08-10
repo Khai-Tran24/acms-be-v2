@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Contract } from '../../contract/entities/contract.entity';
-import { Role } from 'src/shared/enums/role.enum';
+import { Role } from '../../shared/enums/role.enum';
 
 @Entity()
 export class User {
