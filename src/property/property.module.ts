@@ -7,11 +7,12 @@ import { PropertyService } from './property.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { Role } from 'src/shared/enums/role.enum';
+import { AuthModule } from 'src/auth/auth.module';
 
 @ApiBearerAuth()
 @Roles(Role.ADMIN, Role.DAU_GIA_VIEN, Role.THU_KY, Role.NHAN_VIEN_LUU_TRU)
 @Module({
-  imports: [TypeOrmModule.forFeature([Property, ContractProperty])],
+  imports: [TypeOrmModule.forFeature([Property, ContractProperty]), AuthModule],
   controllers: [PropertyController],
   providers: [PropertyService],
   exports: [TypeOrmModule],
