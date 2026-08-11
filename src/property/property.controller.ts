@@ -7,9 +7,11 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { QueryPropertyDto } from './dto/query-property.dto';
 import { PropertyService } from './property.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from 'src/auth/decorators/roles.decorator';
@@ -26,8 +28,8 @@ export class PropertyController {
   @Post() create(@Body() dto: CreatePropertyDto) {
     return this.service.create(dto);
   }
-  @Get() findAll() {
-    return this.service.findAll();
+  @Get() findAll(@Query() query: QueryPropertyDto) {
+    return this.service.findAll(query);
   }
   @Get(':id') findOne(@Param('id') id: string) {
     return this.service.findOne(+id);

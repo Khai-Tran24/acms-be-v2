@@ -11,6 +11,7 @@ import { ContractProperty } from '../property/entities/contract-property.entity'
 import { Property } from '../property/entities/property.entity';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
+import { QueryContractDto } from './dto/query-contract.dto';
 import { Contract } from './entities/contract.entity';
 
 @Injectable()
@@ -42,15 +43,79 @@ export class ContractService {
     return this.findOne(saved.id);
   }
 
-  findAll() {
-    return this.contracts.find({
-      relations: {
-        assignedTo: true,
-        createdBy: true,
-        contractProperties: { property: true },
-      },
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(query: QueryContractDto) {
+    const builder = this.contracts
+      .createQueryBuilder('contract')
+      .leftJoinAndSelect('contract.assignedTo', 'assignedTo')
+      .leftJoinAndSelect('contract.createdBy', 'createdBy')
+      .leftJoinAndSelect('contract.contractProperties', 'contractProperty')
+      .leftJoinAndSelect('contractProperty.property', 'property');
+    if (query.search) {
+      builder.andWhere(
+        `(contract.contract_number ILIKE :search OR contract.contract_name ILIKE :search
+          OR contract.contract_type ILIKE :search OR contract.contract_status ILIKE :search
+          OR CAST(contract.customer AS text) ILIKE :search)`,
+        { search: `%${query.search}%` },
+      );
+    }
+    this.addTextFilter(
+      builder,
+      'contract.contract_number',
+      'contractNumber',
+      query.contractNumber,
+    );
+    this.addTextFilter(
+      builder,
+      'contract.contract_name',
+      'contractName',
+      query.contractName,
+    );
+    this.addTextFilter(
+      builder,
+      'contract.contract_type',
+      'contractType',
+      query.contractType,
+    );
+    this.addTextFilter(
+      builder,
+      'contract.contract_status',
+      'contractStatus',
+      query.contractStatus,
+    );
+    if (query.contractYear !== undefined)
+      builder.andWhere('contract.contract_year = :contractYear', {
+        contractYear: query.contractYear,
+      });
+    if (query.assignedToId !== undefined)
+      builder.andWhere('assignedTo.id = :assignedToId', {
+        assignedToId: query.assignedToId,
+      });
+    if (query.createdById !== undefined)
+      builder.andWhere('createdBy.id = :createdById', {
+        createdById: query.createdById,
+      });
+    if (query.propertyId !== undefined)
+      builder.andWhere('property.id = :propertyId', {
+        propertyId: query.propertyId,
+      });
+    if (query.createdFrom)
+      builder.andWhere('contract.created_at >= :createdFrom', {
+        createdFrom: query.createdFrom,
+      });
+    if (query.createdTo)
+      builder.andWhere('contract.created_at <= :createdTo', {
+        createdTo: query.createdTo,
+      });
+    const [items, total] = await builder
+      .orderBy(
+        `contract.${this.contractSortColumn(query.sortBy)}`,
+        query.sortOrder.toUpperCase() as 'ASC' | 'DESC',
+      )
+      .addOrderBy('contract.id', 'ASC')
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return this.paginated(items, total, query.page, query.limit);
   }
 
   async findOne(id: number) {
@@ -99,6 +164,42 @@ export class ContractService {
     const user = await this.users.findOneBy({ id });
     if (!user) throw new BadRequestException(`User ${id} not found`);
     return user;
+  }
+
+  private addTextFilter(
+    builder: ReturnType<Repository<Contract>['createQueryBuilder']>,
+    column: string,
+    parameter: string,
+    value?: string,
+  ) {
+    if (value)
+      builder.andWhere(`${column} ILIKE :${parameter}`, {
+        [parameter]: `%${value}%`,
+      });
+  }
+
+  private contractSortColumn(sortBy: QueryContractDto['sortBy']) {
+    return (
+      {
+        id: 'id',
+        contractNumber: 'contract_number',
+        contractName: 'contract_name',
+        contractType: 'contract_type',
+        contractYear: 'contract_year',
+        contractStatus: 'contract_status',
+        startingPrice: 'starting_price',
+        stepPrice: 'step_price',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+      } as const
+    )[sortBy];
+  }
+
+  private paginated<T>(items: T[], total: number, page: number, limit: number) {
+    return {
+      items,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   private async replaceProperties(contract: Contract, propertyIds?: number[]) {

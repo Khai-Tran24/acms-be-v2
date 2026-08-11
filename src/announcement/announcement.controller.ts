@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,6 +16,7 @@ import { Role } from '../shared/enums/role.enum';
 import { AnnouncementService } from './announcement.service';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
+import { QueryAnnouncementDto } from './dto/query-announcement.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
 @Controller('announcement')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -25,8 +27,8 @@ export class AnnouncementController {
   @Post() create(@Body() dto: CreateAnnouncementDto) {
     return this.service.create(dto);
   }
-  @Get() findAll() {
-    return this.service.findAll();
+  @Get() findAll(@Query() query: QueryAnnouncementDto) {
+    return this.service.findAll(query);
   }
   @Get(':id') findOne(@Param('id') id: string) {
     return this.service.findOne(+id);

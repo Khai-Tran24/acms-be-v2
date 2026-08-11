@@ -45,8 +45,8 @@ export class Regulation {
   @Column({ name: 'auction_date', type: 'timestamp with time zone' })
   auctionDate!: Date;
 
-  @Column({ name: 'auction_time', type: 'time' })
-  auctionTime!: string;
+  @Column({ name: 'auction_time', type: 'smallint' })
+  auctionTime!: number;
 
   @Column({ name: 'auction_format', length: 100 })
   auctionFormat!: string;

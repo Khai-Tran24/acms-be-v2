@@ -7,10 +7,12 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ContractService } from './contract.service';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
+import { QueryContractDto } from './dto/query-contract.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -35,8 +37,8 @@ export class ContractController {
   }
 
   @Get()
-  findAll() {
-    return this.contractService.findAll();
+  findAll(@Query() query: QueryContractDto) {
+    return this.contractService.findAll(query);
   }
 
   @Get(':id')

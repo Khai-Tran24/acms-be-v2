@@ -28,9 +28,6 @@ export class AuctionResult {
   @Column({ name: 'completed_at', type: 'timestamp with time zone' })
   completedAt!: Date;
 
-  @Column({ name: 'auction_status', length: 50 })
-  auctionStatus!: string;
-
   @ManyToOne(() => Contract, (contract) => contract.auctionResults, {
     onDelete: 'CASCADE',
   })
