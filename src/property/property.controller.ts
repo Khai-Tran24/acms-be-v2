@@ -22,7 +22,13 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 @Controller('property')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.DAU_GIA_VIEN, Role.THU_KY, Role.NHAN_VIEN_LUU_TRU)
+@Roles(
+  Role.ADMIN,
+  Role.DAU_GIA_VIEN,
+  Role.THU_KY,
+  Role.NHAN_VIEN_LUU_TRU,
+  Role.CHUYEN_VIEN,
+)
 export class PropertyController {
   constructor(private readonly service: PropertyService) {}
   @Post() create(@Body() dto: CreatePropertyDto) {

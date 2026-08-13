@@ -20,7 +20,13 @@ import { QueryAnnouncementDto } from './dto/query-announcement.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
 @Controller('announcement')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.DAU_GIA_VIEN, Role.THU_KY, Role.NHAN_VIEN_LUU_TRU)
+@Roles(
+  Role.ADMIN,
+  Role.DAU_GIA_VIEN,
+  Role.THU_KY,
+  Role.NHAN_VIEN_LUU_TRU,
+  Role.CHUYEN_VIEN,
+)
 @ApiBearerAuth()
 export class AnnouncementController {
   constructor(private readonly service: AnnouncementService) {}

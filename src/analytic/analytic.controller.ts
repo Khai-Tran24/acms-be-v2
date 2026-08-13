@@ -1,54 +1,58 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Role } from '../shared/enums/role.enum';
 import { AnalyticService } from './analytic.service';
-import { CreateAnalyticDto } from './dto/create-analytic.dto';
-import { UpdateAnalyticDto } from './dto/update-analytic.dto';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { DashboardTrendQueryDto } from './dto/dashboard-query.dto';
 
-@Controller('analytic')
+@ApiTags('Dashboard')
+@Controller('api/dashboard')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.DAU_GIA_VIEN, Role.THU_KY, Role.NHAN_VIEN_LUU_TRU)
+@Roles(
+  Role.ADMIN,
+  Role.DAU_GIA_VIEN,
+  Role.THU_KY,
+  Role.NHAN_VIEN_LUU_TRU,
+  Role.CHUYEN_VIEN,
+)
 @ApiBearerAuth()
 export class AnalyticController {
-  constructor(private readonly analyticService: AnalyticService) {}
+  constructor(private readonly analytics: AnalyticService) {}
 
-  @Post()
-  create(@Body() createAnalyticDto: CreateAnalyticDto) {
-    return this.analyticService.create(createAnalyticDto);
+  @Get('summary')
+  getSummary() {
+    return this.analytics.getSummary();
   }
 
-  @Get()
-  findAll() {
-    return this.analyticService.findAll();
+  @Get('charts/trends')
+  getTrends(@Query() query: DashboardTrendQueryDto) {
+    return this.analytics.getTrends(query.timeframe);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.analyticService.findOne(+id);
+  @Get('charts/asset-breakdown')
+  getAssetBreakdown() {
+    return this.analytics.getAssetBreakdown();
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateAnalyticDto: UpdateAnalyticDto,
-  ) {
-    return this.analyticService.update(+id, updateAnalyticDto);
+  @Get('charts/contracts-over-time')
+  getContractsOverTime() {
+    return this.analytics.getContractsOverTime();
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.analyticService.remove(+id);
+  @Get('tables/recent-files')
+  getRecentFiles() {
+    return this.analytics.getRecentFiles();
+  }
+
+  @Get('tables/liquidated-files')
+  getLiquidatedFiles() {
+    return this.analytics.getLiquidatedFiles();
+  }
+
+  @Get('tables/top-officers')
+  getTopOfficers() {
+    return this.analytics.getTopOfficers();
   }
 }

@@ -20,7 +20,13 @@ import { QueryAuctionResultDto } from './dto/query-auction-result.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
 @Controller('auction-result')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.DAU_GIA_VIEN, Role.THU_KY, Role.NHAN_VIEN_LUU_TRU)
+@Roles(
+  Role.ADMIN,
+  Role.DAU_GIA_VIEN,
+  Role.THU_KY,
+  Role.NHAN_VIEN_LUU_TRU,
+  Role.CHUYEN_VIEN,
+)
 @ApiBearerAuth()
 export class AuctionResultController {
   constructor(private readonly service: AuctionResultService) {}

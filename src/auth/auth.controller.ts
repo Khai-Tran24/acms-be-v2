@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -12,6 +12,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { AuthUser } from './types/auth-user.type';
+import { ChangePasswordDto, UpdateProfileDto } from './dto/profile.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -46,6 +47,21 @@ export class AuthController {
   @Get('me') @ApiBearerAuth() @UseGuards(JwtAuthGuard) me(
     @CurrentUser() user: AuthUser,
   ) {
-    return user;
+    return this.auth.profile(user.id);
+  }
+  @Patch('me') @ApiBearerAuth() @UseGuards(JwtAuthGuard) updateMe(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.auth.updateProfile(user.id, dto);
+  }
+  @Post('change-password')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.auth.changePassword(user.id, dto);
   }
 }

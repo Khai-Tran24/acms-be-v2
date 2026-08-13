@@ -20,6 +20,7 @@ import {
 } from './dto/otp.dto';
 import { AuthUser } from './types/auth-user.type';
 import { MailerService } from './mailer.service';
+import { ChangePasswordDto, UpdateProfileDto } from './dto/profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -148,6 +149,39 @@ export class AuthService {
     return { message: 'Signed out successfully' };
   }
 
+  async profile(userId: number) {
+    const user = await this.users.findOneBy({ id: userId });
+    if (!user) throw new UnauthorizedException('User not found');
+    return this.profileResponse(user);
+  }
+
+  async updateProfile(userId: number, dto: UpdateProfileDto) {
+    const user = await this.users.findOneBy({ id: userId });
+    if (!user) throw new UnauthorizedException('User not found');
+    Object.assign(user, dto);
+    try {
+      return this.profileResponse(await this.users.save(user));
+    } catch (error) {
+      if (this.isUniqueViolation(error))
+        throw new ConflictException('Username is already in use');
+      throw error;
+    }
+  }
+
+  async changePassword(userId: number, dto: ChangePasswordDto) {
+    const user = await this.users
+      .createQueryBuilder('user')
+      .addSelect(['user.password', 'user.refreshTokenHash'])
+      .where('user.id = :userId', { userId })
+      .getOne();
+    if (!user || !(await compareWithBcrypt(dto.currentPassword, user.password)))
+      throw new UnauthorizedException('Current password is incorrect');
+    user.password = await hashWithBcrypt(dto.newPassword);
+    user.refreshTokenHash = null;
+    await this.users.save(user);
+    return { message: 'Password changed successfully' };
+  }
+
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.findUserWithSecrets(dto.email);
     if (user?.isActive) {
@@ -208,6 +242,22 @@ export class AuthService {
       email: user.email,
       username: user.username,
       role: user.role,
+      avatar: user.avatar,
+    };
+  }
+
+  private profileResponse(user: User) {
+    return {
+      id: user.id,
+      username: user.username,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 

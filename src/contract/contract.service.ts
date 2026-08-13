@@ -53,7 +53,8 @@ export class ContractService {
     if (query.search) {
       builder.andWhere(
         `(contract.contract_number ILIKE :search OR contract.contract_name ILIKE :search
-          OR contract.contract_type ILIKE :search OR contract.contract_status ILIKE :search
+          OR CAST(contract.contract_type AS text) ILIKE :search
+          OR CAST(contract.contract_status AS text) ILIKE :search
           OR CAST(contract.customer AS text) ILIKE :search)`,
         { search: `%${query.search}%` },
       );
@@ -72,13 +73,13 @@ export class ContractService {
     );
     this.addTextFilter(
       builder,
-      'contract.contract_type',
+      'CAST(contract.contract_type AS text)',
       'contractType',
       query.contractType,
     );
     this.addTextFilter(
       builder,
-      'contract.contract_status',
+      'CAST(contract.contract_status AS text)',
       'contractStatus',
       query.contractStatus,
     );

@@ -21,7 +21,13 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 @Controller('regulation')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
-@Roles(Role.ADMIN, Role.DAU_GIA_VIEN, Role.THU_KY, Role.NHAN_VIEN_LUU_TRU)
+@Roles(
+  Role.ADMIN,
+  Role.DAU_GIA_VIEN,
+  Role.THU_KY,
+  Role.NHAN_VIEN_LUU_TRU,
+  Role.CHUYEN_VIEN,
+)
 export class RegulationController {
   constructor(private readonly service: RegulationService) {}
   @Post() create(@Body() dto: CreateRegulationDto) {

@@ -74,6 +74,9 @@ export class User {
   @OneToMany(() => Contract, (contract) => contract.assignedTo)
   assignedContracts!: Contract[];
 
+  // Populated by list queries without loading complete contract records.
+  assignedContractIds?: number[];
+
   @OneToMany(() => Contract, (contract) => contract.createdBy)
   createdContracts!: Contract[];
 
