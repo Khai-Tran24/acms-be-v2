@@ -7,9 +7,11 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { QueryPropertyDto } from './dto/query-property.dto';
 import { PropertyService } from './property.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from 'src/auth/decorators/roles.decorator';
@@ -20,14 +22,20 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 @Controller('property')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.DAU_GIA_VIEN, Role.THU_KY, Role.NHAN_VIEN_LUU_TRU)
+@Roles(
+  Role.ADMIN,
+  Role.DAU_GIA_VIEN,
+  Role.THU_KY,
+  Role.NHAN_VIEN_LUU_TRU,
+  Role.CHUYEN_VIEN,
+)
 export class PropertyController {
   constructor(private readonly service: PropertyService) {}
   @Post() create(@Body() dto: CreatePropertyDto) {
     return this.service.create(dto);
   }
-  @Get() findAll() {
-    return this.service.findAll();
+  @Get() findAll(@Query() query: QueryPropertyDto) {
+    return this.service.findAll(query);
   }
   @Get(':id') findOne(@Param('id') id: string) {
     return this.service.findOne(+id);

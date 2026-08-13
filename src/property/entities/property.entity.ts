@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ContractProperty } from './contract-property.entity';
+import { PropertyType } from 'src/shared/enums/property.enum';
 
 @Entity('property')
 export class Property {
@@ -16,8 +17,13 @@ export class Property {
   @Column({ name: 'property_name', length: 255 })
   propertyName!: string;
 
-  @Column({ name: 'property_type', length: 100 })
-  propertyType!: string;
+  @Column({
+    name: 'property_type',
+    type: 'enum',
+    enum: PropertyType,
+    default: PropertyType.TAI_SAN_KHAC,
+  })
+  propertyType!: PropertyType;
 
   @OneToMany(() => ContractProperty, (item) => item.property)
   contractProperties!: ContractProperty[];

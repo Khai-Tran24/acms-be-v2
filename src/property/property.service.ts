@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { QueryPropertyDto } from './dto/query-property.dto';
 import { Property } from './entities/property.entity';
 
 @Injectable()
@@ -13,8 +14,53 @@ export class PropertyService {
   create(dto: CreatePropertyDto) {
     return this.repo.save(this.repo.create(dto));
   }
-  findAll() {
-    return this.repo.find({ order: { createdAt: 'DESC' } });
+  async findAll(query: QueryPropertyDto) {
+    const builder = this.repo
+      .createQueryBuilder('property')
+      .leftJoinAndSelect('property.contractProperties', 'contractProperty')
+      .leftJoinAndSelect('contractProperty.contract', 'contract');
+    if (query.search)
+      builder.andWhere(
+        '(property.property_name ILIKE :search OR property.property_type ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    if (query.propertyName)
+      builder.andWhere('property.property_name ILIKE :propertyName', {
+        propertyName: `%${query.propertyName}%`,
+      });
+    if (query.propertyType)
+      builder.andWhere('property.property_type ILIKE :propertyType', {
+        propertyType: `%${query.propertyType}%`,
+      });
+    if (query.contractId !== undefined)
+      builder.andWhere('contract.id = :contractId', {
+        contractId: query.contractId,
+      });
+    const columns = {
+      id: 'id',
+      propertyName: 'property_name',
+      propertyType: 'property_type',
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    } as const;
+    const [items, total] = await builder
+      .orderBy(
+        `property.${columns[query.sortBy]}`,
+        query.sortOrder.toUpperCase() as 'ASC' | 'DESC',
+      )
+      .addOrderBy('property.id', 'ASC')
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return {
+      items,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    };
   }
   async findOne(id: number) {
     const item = await this.repo.findOne({

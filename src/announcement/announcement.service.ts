@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { Contract } from '../contract/entities/contract.entity';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
+import { QueryAnnouncementDto } from './dto/query-announcement.dto';
 import { Announcement } from './entities/announcement.entity';
 @Injectable()
 export class AnnouncementService {
@@ -41,11 +42,58 @@ export class AnnouncementService {
       }),
     );
   }
-  findAll() {
-    return this.repo.find({
-      relations: { contract: true },
-      order: { auctionDate: 'DESC' },
-    });
+  async findAll(query: QueryAnnouncementDto) {
+    const builder = this.repo
+      .createQueryBuilder('announcement')
+      .leftJoinAndSelect('announcement.contract', 'contract');
+    if (query.search)
+      builder.andWhere(
+        '(announcement.announcement_number ILIKE :search OR announcement.auction_format ILIKE :search OR announcement.auction_method ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_name ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    if (query.announcementNumber)
+      builder.andWhere(
+        'announcement.announcement_number ILIKE :announcementNumber',
+        { announcementNumber: `%${query.announcementNumber}%` },
+      );
+    if (query.auctionFormat)
+      builder.andWhere('announcement.auction_format ILIKE :auctionFormat', {
+        auctionFormat: `%${query.auctionFormat}%`,
+      });
+    if (query.auctionMethod)
+      builder.andWhere('announcement.auction_method ILIKE :auctionMethod', {
+        auctionMethod: `%${query.auctionMethod}%`,
+      });
+    if (query.contractId !== undefined)
+      builder.andWhere('contract.id = :contractId', {
+        contractId: query.contractId,
+      });
+    if (query.auctionFrom)
+      builder.andWhere('announcement.auction_date >= :auctionFrom', {
+        auctionFrom: query.auctionFrom,
+      });
+    if (query.auctionTo)
+      builder.andWhere('announcement.auction_date <= :auctionTo', {
+        auctionTo: query.auctionTo,
+      });
+    const [items, total] = await builder
+      .orderBy(
+        `announcement.${this.sortColumn(query.sortBy)}`,
+        query.sortOrder.toUpperCase() as 'ASC' | 'DESC',
+      )
+      .addOrderBy('announcement.id', 'ASC')
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return {
+      items,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
+    };
   }
   async findOne(id: number) {
     const item = await this.repo.findOne({
@@ -112,5 +160,23 @@ export class AnnouncementService {
     const item = await this.contracts.findOneBy({ id });
     if (!item) throw new NotFoundException('Contract not found');
     return item;
+  }
+  private sortColumn(sortBy: QueryAnnouncementDto['sortBy']) {
+    return (
+      {
+        id: 'id',
+        announcementNumber: 'announcement_number',
+        startingPrice: 'starting_price',
+        depositAmount: 'deposit_amount',
+        stepPrice: 'step_price',
+        registrationFee: 'registration_fee',
+        startRegisterDate: 'start_register_date',
+        endRegisterDate: 'end_register_date',
+        auctionDate: 'auction_date',
+        auctionTime: 'auction_time',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+      } as const
+    )[sortBy];
   }
 }

@@ -50,12 +50,17 @@ export class UserService {
       sortBy,
       sortOrder,
     } = query;
-    const builder = this.userRepository.createQueryBuilder('user');
+    const builder = this.userRepository
+      .createQueryBuilder('user')
+      .loadRelationIdAndMap(
+        'user.assignedContractIds',
+        'user.assignedContracts',
+      );
 
     if (search) {
       const term = `%${search}%`;
       builder.andWhere(
-        '(user.username ILIKE :term OR user.email ILIKE :term OR user.full_name ILIKE :term OR user.phone ILIKE :term)',
+        '(CAST(user.id AS text) ILIKE :term OR user.username ILIKE :term OR user.email ILIKE :term OR user.full_name ILIKE :term OR user.phone ILIKE :term)',
         { term },
       );
     }
@@ -96,9 +101,14 @@ export class UserService {
   async findOne(id: number) {
     const user = await this.userRepository.findOne({
       where: { id },
+      loadRelationIds: false,
+      relations: { assignedContracts: true },
     });
     if (!user) throw new NotFoundException('User not found');
-    return this.toResponse(user);
+    return {
+      ...this.toResponse(user),
+      assignedContractCount: user.assignedContracts.length,
+    };
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
@@ -140,9 +150,20 @@ export class UserService {
   }
 
   private toResponse(user: User) {
-    const { password, ...result } = user;
+    const {
+      password,
+      assignedContracts,
+      assignedContractIds,
+      createdContracts,
+      ...result
+    } = user;
     void password;
-    return result;
+    void createdContracts;
+    return {
+      ...result,
+      assignedContractCount:
+        assignedContractIds?.length ?? assignedContracts?.length ?? 0,
+    };
   }
 
   private throwIfDuplicate(error: unknown): void {
