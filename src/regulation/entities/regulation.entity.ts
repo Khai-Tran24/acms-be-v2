@@ -5,10 +5,12 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Contract } from '../../contract/entities/contract.entity';
+import { FileEntity } from '../../file/entity/file.entity';
 
 @Entity('regulation')
 export class Regulation {
@@ -59,6 +61,9 @@ export class Regulation {
   })
   @JoinColumn({ name: 'contract_id' })
   contract!: Contract;
+
+  @OneToMany(() => FileEntity, (file) => file.regulation)
+  files!: FileEntity[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

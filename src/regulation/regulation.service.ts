@@ -6,12 +6,15 @@ import { CreateRegulationDto } from './dto/create-regulation.dto';
 import { UpdateRegulationDto } from './dto/update-regulation.dto';
 import { QueryRegulationDto } from './dto/query-regulation.dto';
 import { Regulation } from './entities/regulation.entity';
+import { FileEntityType } from '../file/dto/file.dto';
+import { UploadFileServiceS3 } from '../file/upload-file.service';
 @Injectable()
 export class RegulationService {
   constructor(
     @InjectRepository(Regulation) private readonly repo: Repository<Regulation>,
     @InjectRepository(Contract)
     private readonly contracts: Repository<Contract>,
+    private readonly fileService: UploadFileServiceS3,
   ) {}
   async create(dto: CreateRegulationDto) {
     const { contractId, ...values } = dto;
@@ -75,6 +78,13 @@ export class RegulationService {
     };
   }
   async findOne(id: number) {
+    const item = await this.findEntity(id);
+    return {
+      ...item,
+      files: await this.fileService.activeFiles(FileEntityType.REGULATION, id),
+    };
+  }
+  private async findEntity(id: number) {
     const item = await this.repo.findOne({
       where: { id },
       relations: { contract: true },
@@ -83,7 +93,7 @@ export class RegulationService {
     return item;
   }
   async update(id: number, dto: UpdateRegulationDto) {
-    const item = await this.findOne(id);
+    const item = await this.findEntity(id);
     const { contractId, ...values } = dto;
     Object.assign(item, this.money(values));
     if (contractId) item.contract = await this.contract(contractId);

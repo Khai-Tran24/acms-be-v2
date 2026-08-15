@@ -14,6 +14,7 @@ import { ContractProperty } from '../../property/entities/contract-property.enti
 import { Regulation } from '../../regulation/entities/regulation.entity';
 import { AuctionResult } from '../../auction-result/entities/auction-result.entity';
 import { Announcement } from '../../announcement/entities/announcement.entity';
+import { FileEntity } from '../../file/entity/file.entity';
 import { ContractStatus, ContractType } from 'src/shared/enums/contract.enum';
 
 @Entity('contract')
@@ -83,6 +84,9 @@ export class Contract {
 
   @OneToMany(() => Announcement, (announcement) => announcement.contract)
   announcements!: Announcement[];
+
+  @OneToMany(() => FileEntity, (file) => file.contract)
+  files!: FileEntity[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

@@ -13,6 +13,8 @@ import { CreateContractDto } from './dto/create-contract.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
 import { QueryContractDto } from './dto/query-contract.dto';
 import { Contract } from './entities/contract.entity';
+import { UploadFileServiceS3 } from '../file/upload-file.service';
+import { FileEntityType } from '../file/dto/file.dto';
 
 @Injectable()
 export class ContractService {
@@ -24,6 +26,7 @@ export class ContractService {
     private readonly properties: Repository<Property>,
     @InjectRepository(ContractProperty)
     private readonly contractProperties: Repository<ContractProperty>,
+    private readonly fileService: UploadFileServiceS3,
   ) {}
 
   async create(dto: CreateContractDto, createdById?: number) {
@@ -120,6 +123,14 @@ export class ContractService {
   }
 
   async findOne(id: number) {
+    const contract = await this.findEntity(id);
+    return {
+      ...contract,
+      files: await this.fileService.activeFiles(FileEntityType.CONTRACT, id),
+    };
+  }
+
+  private async findEntity(id: number) {
     const contract = await this.contracts.findOne({
       where: { id },
       relations: {
@@ -136,7 +147,7 @@ export class ContractService {
   }
 
   async update(id: number, dto: UpdateContractDto) {
-    const contract = await this.findOne(id);
+    const contract = await this.findEntity(id);
     const { assignedToId, propertyIds, ...data } = dto;
     Object.assign(contract, data, {
       ...(data.startingPrice !== undefined && {
