@@ -14,6 +14,5 @@ export class CreateAuctionResultDto {
   @ApiProperty({ type: Object }) @IsObject() winner!: Record<string, unknown>;
   @ApiProperty() @Type(() => Number) @IsNumber() @Min(0) winningPrice!: number;
   @ApiProperty() @IsDateString() completedAt!: string;
-  @ApiProperty() @IsString() @MaxLength(50) auctionStatus!: string;
   @ApiProperty() @Type(() => Number) @IsInt() @Min(1) contractId!: number;
 }

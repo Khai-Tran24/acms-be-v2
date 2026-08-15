@@ -14,6 +14,7 @@ import { ContractProperty } from '../../property/entities/contract-property.enti
 import { Regulation } from '../../regulation/entities/regulation.entity';
 import { AuctionResult } from '../../auction-result/entities/auction-result.entity';
 import { Announcement } from '../../announcement/entities/announcement.entity';
+import { ContractStatus, ContractType } from 'src/shared/enums/contract.enum';
 
 @Entity('contract')
 export class Contract {
@@ -27,16 +28,26 @@ export class Contract {
   @Column({ name: 'contract_name', length: 255 })
   contractName!: string;
 
-  @Column({ name: 'contract_type', length: 50 })
-  contractType!: string;
+  @Column({
+    name: 'contract_type',
+    type: 'enum',
+    enum: ContractType,
+    default: ContractType.HOP_DONG_MOI,
+  })
+  contractType!: ContractType;
 
   @Index()
   @Column({ name: 'contract_year', type: 'smallint' })
   contractYear!: number;
 
   @Index()
-  @Column({ name: 'contract_status', length: 50 })
-  contractStatus!: string;
+  @Column({
+    name: 'contract_status',
+    type: 'enum',
+    enum: ContractStatus,
+    default: ContractStatus.MOI,
+  })
+  contractStatus!: ContractStatus;
 
   @Column({ name: 'customer', type: 'jsonb', nullable: true })
   customer!: Record<string, unknown> | null;

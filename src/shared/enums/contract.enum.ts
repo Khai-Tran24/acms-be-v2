@@ -6,6 +6,11 @@ export enum ContractType {
   HOP_DONG_RUT_GON = 'HOP_DONG_RUT_GON',
 }
 
-// export enum ContractStatus {
-
-// }
+export enum ContractStatus {
+  MOI = 'MOI',
+  DANG_DAU_GIA = 'DANG_DAU_GIA',
+  DAU_GIA_KHONG_THANH = 'DAU_GIA_KHONG_THANH',
+  DAU_GIA_THANH = 'DAU_GIA_THANH',
+  TAM_DUNG = 'TAM_DUNG',
+  DA_THANH_LY = 'DA_THANH_LY',
+}
