@@ -1,4 +1,5 @@
 import { Announcement } from '../../announcement/entities/announcement.entity';
+import { AuctionResult } from '../../auction-result/entities/auction-result.entity';
 import { Contract } from '../../contract/entities/contract.entity';
 import { Regulation } from '../../regulation/entities/regulation.entity';
 import { FileStatus } from '../../shared/enums/file.enum';
@@ -57,6 +58,13 @@ export class FileEntity {
   })
   @JoinColumn({ name: 'announcement_id' })
   announcement!: Announcement | null;
+
+  @ManyToOne(() => AuctionResult, (auctionResult) => auctionResult.files, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'auction_result_id' })
+  auctionResult!: AuctionResult | null;
 
   // This becomes a ManyToOne relation when a Liquidation entity is added.
   @Index()

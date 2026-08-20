@@ -5,9 +5,14 @@ import { Contract } from '../contract/entities/contract.entity';
 import { AuctionResultController } from './auction-result.controller';
 import { AuctionResultService } from './auction-result.service';
 import { AuthModule } from '../auth/auth.module';
+import { UploadFileModule } from '../file/upload-file.module';
 
 @Module({
-  imports: [AuthModule, TypeOrmModule.forFeature([AuctionResult, Contract])],
+  imports: [
+    AuthModule,
+    TypeOrmModule.forFeature([AuctionResult, Contract]),
+    UploadFileModule,
+  ],
   controllers: [AuctionResultController],
   providers: [AuctionResultService],
   exports: [TypeOrmModule],

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Announcement } from '../announcement/entities/announcement.entity';
+import { AuctionResult } from '../auction-result/entities/auction-result.entity';
 import { AuthModule } from '../auth/auth.module';
 import { Contract } from '../contract/entities/contract.entity';
 import { Regulation } from '../regulation/entities/regulation.entity';
@@ -11,7 +12,13 @@ import { UploadFileServiceS3 } from './upload-file.service';
 @Module({
   imports: [
     AuthModule,
-    TypeOrmModule.forFeature([FileEntity, Contract, Regulation, Announcement]),
+    TypeOrmModule.forFeature([
+      FileEntity,
+      Contract,
+      Regulation,
+      Announcement,
+      AuctionResult,
+    ]),
   ],
   controllers: [UploadFileController],
   providers: [UploadFileServiceS3],

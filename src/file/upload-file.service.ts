@@ -16,6 +16,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
 import { Announcement } from '../announcement/entities/announcement.entity';
+import { AuctionResult } from '../auction-result/entities/auction-result.entity';
 import { Contract } from '../contract/entities/contract.entity';
 import { Regulation } from '../regulation/entities/regulation.entity';
 import { FileStatus } from '../shared/enums/file.enum';
@@ -41,6 +42,8 @@ export class UploadFileServiceS3 {
     private readonly regulations: Repository<Regulation>,
     @InjectRepository(Announcement)
     private readonly announcements: Repository<Announcement>,
+    @InjectRepository(AuctionResult)
+    private readonly auctionResults: Repository<AuctionResult>,
   ) {
     this.bucketName =
       process.env.AWS_S3_BUCKET_NAME ?? process.env.AWS_S3_PUBLIC_BUCKET ?? '';
@@ -73,6 +76,7 @@ export class UploadFileServiceS3 {
         contract: null,
         regulation: null,
         announcement: null,
+        auctionResult: null,
         liquidationId: null,
         ...relation,
       }),
@@ -143,6 +147,7 @@ export class UploadFileServiceS3 {
       .leftJoinAndSelect('file.contract', 'contract')
       .leftJoinAndSelect('file.regulation', 'regulation')
       .leftJoinAndSelect('file.announcement', 'announcement')
+      .leftJoinAndSelect('file.auctionResult', 'auctionResult')
       .where('file.status != :deleted', { deleted: FileStatus.DELETED });
     if (query.entityType && query.entityId === undefined)
       builder.andWhere(
@@ -217,7 +222,12 @@ export class UploadFileServiceS3 {
   private async activeOrPending(id: number) {
     const file = await this.files.findOne({
       where: { id },
-      relations: { contract: true, regulation: true, announcement: true },
+      relations: {
+        contract: true,
+        regulation: true,
+        announcement: true,
+        auctionResult: true,
+      },
     });
     if (!file || file.status === FileStatus.DELETED)
       throw new NotFoundException('File not found');
@@ -240,6 +250,12 @@ export class UploadFileServiceS3 {
       if (!announcement) throw new NotFoundException('Announcement not found');
       return { announcement };
     }
+    if (type === FileEntityType.AUCTION_RESULT) {
+      const auctionResult = await this.auctionResults.findOneBy({ id });
+      if (!auctionResult)
+        throw new NotFoundException('Auction result not found');
+      return { auctionResult };
+    }
     throw new BadRequestException(
       'LIQUIDATION is unavailable because this project has no Liquidation entity',
     );
@@ -251,6 +267,7 @@ export class UploadFileServiceS3 {
         [FileEntityType.CONTRACT]: 'contract_id',
         [FileEntityType.REGULATION]: 'regulation_id',
         [FileEntityType.ANNOUNCEMENT]: 'announcement_id',
+        [FileEntityType.AUCTION_RESULT]: 'auction_result_id',
         [FileEntityType.LIQUIDATION]: 'liquidation_id',
       } as const
     )[type];
