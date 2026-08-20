@@ -6,6 +6,8 @@ import { CreateAuctionResultDto } from './dto/create-auction-result.dto';
 import { UpdateAuctionResultDto } from './dto/update-auction-result.dto';
 import { QueryAuctionResultDto } from './dto/query-auction-result.dto';
 import { AuctionResult } from './entities/auction-result.entity';
+import { FileEntityType } from '../file/dto/file.dto';
+import { UploadFileServiceS3 } from '../file/upload-file.service';
 @Injectable()
 export class AuctionResultService {
   constructor(
@@ -13,6 +15,7 @@ export class AuctionResultService {
     private readonly repo: Repository<AuctionResult>,
     @InjectRepository(Contract)
     private readonly contracts: Repository<Contract>,
+    private readonly fileService: UploadFileServiceS3,
   ) {}
   async create(dto: CreateAuctionResultDto) {
     const { contractId, winningPrice, completedAt, ...data } = dto;
@@ -72,6 +75,16 @@ export class AuctionResultService {
     };
   }
   async findOne(id: number) {
+    const item = await this.findEntity(id);
+    return {
+      ...item,
+      files: await this.fileService.activeFiles(
+        FileEntityType.AUCTION_RESULT,
+        id,
+      ),
+    };
+  }
+  private async findEntity(id: number) {
     const item = await this.repo.findOne({
       where: { id },
       relations: { contract: true },
@@ -80,7 +93,7 @@ export class AuctionResultService {
     return item;
   }
   async update(id: number, dto: UpdateAuctionResultDto) {
-    const item = await this.findOne(id);
+    const item = await this.findEntity(id);
     const { contractId, winningPrice, completedAt, ...data } = dto;
     Object.assign(item, data);
     if (winningPrice !== undefined) item.winningPrice = String(winningPrice);

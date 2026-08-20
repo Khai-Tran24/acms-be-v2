@@ -11,6 +11,7 @@ import { PropertyModule } from './property/property.module';
 import { RegulationModule } from './regulation/regulation.module';
 import { AuctionResultModule } from './auction-result/auction-result.module';
 import { AnnouncementModule } from './announcement/announcement.module';
+import { UploadFileModule } from './file/upload-file.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AnnouncementModule } from './announcement/announcement.module';
     RegulationModule,
     AuctionResultModule,
     AnnouncementModule,
+    UploadFileModule,
   ],
   controllers: [],
   providers: [],

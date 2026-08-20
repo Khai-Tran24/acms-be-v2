@@ -10,6 +10,8 @@ import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 import { QueryAnnouncementDto } from './dto/query-announcement.dto';
 import { Announcement } from './entities/announcement.entity';
+import { FileEntityType } from '../file/dto/file.dto';
+import { UploadFileServiceS3 } from '../file/upload-file.service';
 @Injectable()
 export class AnnouncementService {
   constructor(
@@ -17,6 +19,7 @@ export class AnnouncementService {
     private readonly repo: Repository<Announcement>,
     @InjectRepository(Contract)
     private readonly contracts: Repository<Contract>,
+    private readonly fileService: UploadFileServiceS3,
   ) {}
   async create(dto: CreateAnnouncementDto) {
     const {
@@ -96,6 +99,16 @@ export class AnnouncementService {
     };
   }
   async findOne(id: number) {
+    const item = await this.findEntity(id);
+    return {
+      ...item,
+      files: await this.fileService.activeFiles(
+        FileEntityType.ANNOUNCEMENT,
+        id,
+      ),
+    };
+  }
+  private async findEntity(id: number) {
     const item = await this.repo.findOne({
       where: { id },
       relations: { contract: true },
@@ -104,7 +117,7 @@ export class AnnouncementService {
     return item;
   }
   async update(id: number, dto: UpdateAnnouncementDto) {
-    const item = await this.findOne(id);
+    const item = await this.findEntity(id);
     const { contractId, ...data } = dto;
     const dates = {
       startRegisterDate:
