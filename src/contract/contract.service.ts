@@ -32,9 +32,10 @@ export class ContractService {
   async create(dto: CreateContractDto, createdById?: number) {
     if (await this.contracts.existsBy({ contractNumber: dto.contractNumber }))
       throw new ConflictException('Contract number already exists');
-    const { assignedToId, propertyIds, ...data } = dto;
+    const { assignedToId, propertyIds, contractDate, ...data } = dto;
     const contract = this.contracts.create({
       ...data,
+      contractDate: contractDate ? new Date(contractDate) : null,
       startingPrice: String(data.startingPrice),
       stepPrice: String(data.stepPrice),
       customer: data.customer ?? null,
@@ -57,6 +58,7 @@ export class ContractService {
       builder.andWhere(
         `(contract.contract_number ILIKE :search OR contract.contract_name ILIKE :search
           OR CAST(contract.contract_type AS text) ILIKE :search
+          OR CAST(contract.contract_owner_type AS text) ILIKE :search
           OR CAST(contract.contract_status AS text) ILIKE :search
           OR CAST(contract.customer AS text) ILIKE :search)`,
         { search: `%${query.search}%` },
@@ -80,16 +82,24 @@ export class ContractService {
       'contractType',
       query.contractType,
     );
+    if (query.contractOwnerType !== undefined)
+      builder.andWhere('contract.contract_owner_type = :contractOwnerType', {
+        contractOwnerType: query.contractOwnerType,
+      });
+    if (query.contractDateFrom)
+      builder.andWhere('contract.contract_date >= :contractDateFrom', {
+        contractDateFrom: query.contractDateFrom,
+      });
+    if (query.contractDateTo)
+      builder.andWhere('contract.contract_date <= :contractDateTo', {
+        contractDateTo: query.contractDateTo,
+      });
     this.addTextFilter(
       builder,
       'CAST(contract.contract_status AS text)',
       'contractStatus',
       query.contractStatus,
     );
-    if (query.contractYear !== undefined)
-      builder.andWhere('contract.contract_year = :contractYear', {
-        contractYear: query.contractYear,
-      });
     if (query.assignedToId !== undefined)
       builder.andWhere('assignedTo.id = :assignedToId', {
         assignedToId: query.assignedToId,
@@ -150,6 +160,9 @@ export class ContractService {
     const contract = await this.findEntity(id);
     const { assignedToId, propertyIds, ...data } = dto;
     Object.assign(contract, data, {
+      ...(data.contractDate !== undefined && {
+        contractDate: data.contractDate ? new Date(data.contractDate) : null,
+      }),
       ...(data.startingPrice !== undefined && {
         startingPrice: String(data.startingPrice),
       }),
@@ -197,7 +210,8 @@ export class ContractService {
         contractNumber: 'contract_number',
         contractName: 'contract_name',
         contractType: 'contract_type',
-        contractYear: 'contract_year',
+        contractOwnerType: 'contract_owner_type',
+        contractDate: 'contract_date',
         contractStatus: 'contract_status',
         startingPrice: 'starting_price',
         stepPrice: 'step_price',

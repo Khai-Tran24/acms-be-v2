@@ -15,7 +15,11 @@ import { Regulation } from '../../regulation/entities/regulation.entity';
 import { AuctionResult } from '../../auction-result/entities/auction-result.entity';
 import { Announcement } from '../../announcement/entities/announcement.entity';
 import { FileEntity } from '../../file/entity/file.entity';
-import { ContractStatus, ContractType } from 'src/shared/enums/contract.enum';
+import {
+  ContractPropertyOwnerType,
+  ContractStatus,
+  ContractType,
+} from 'src/shared/enums/contract.enum';
 
 @Entity('contract')
 export class Contract {
@@ -37,9 +41,17 @@ export class Contract {
   })
   contractType!: ContractType;
 
-  @Index()
-  @Column({ name: 'contract_year', type: 'smallint' })
-  contractYear!: number;
+  @Column({
+    name: 'contract_owner_type',
+    type: 'enum',
+    enum: ContractPropertyOwnerType,
+    default: ContractPropertyOwnerType.TAI_SAN_THI_HANH_AN,
+    nullable: true,
+  })
+  contractOwnerType!: ContractPropertyOwnerType;
+
+  @Column({ name: 'contract_date', type: 'date', nullable: true })
+  contractDate!: Date | null;
 
   @Index()
   @Column({

@@ -2,19 +2,22 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
+  IsEnum,
   IsIn,
   IsInt,
   IsOptional,
   IsString,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../shared/dto/pagination-query.dto';
+import { ContractPropertyOwnerType } from '../../shared/enums/contract.enum';
 
 export const CONTRACT_SORT_FIELDS = [
   'id',
   'contractNumber',
   'contractName',
   'contractType',
-  'contractYear',
+  'contractOwnerType',
+  'contractDate',
   'contractStatus',
   'startingPrice',
   'stepPrice',
@@ -27,11 +30,15 @@ export class QueryContractDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() contractNumber?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() contractName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() contractType?: string;
+  @ApiPropertyOptional({ enum: ContractPropertyOwnerType })
+  @IsOptional()
+  @IsEnum(ContractPropertyOwnerType)
+  contractOwnerType?: ContractPropertyOwnerType;
   @ApiPropertyOptional()
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  contractYear?: number;
+  @IsDateString()
+  contractDateFrom?: string;
+  @ApiPropertyOptional() @IsOptional() @IsDateString() contractDateTo?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() contractStatus?: string;
   @ApiPropertyOptional()
   @IsOptional()

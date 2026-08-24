@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS contract (
   contract_number varchar(100) NOT NULL UNIQUE,
   contract_name varchar(255) NOT NULL,
   contract_type varchar(50) NOT NULL,
-  contract_year smallint NOT NULL,
+  contract_owner_type varchar(100) DEFAULT 'TAI_SAN_THI_HANH_AN',
+  contract_date date,
   contract_status varchar(50) NOT NULL,
   customer jsonb,
   starting_price numeric(18,2) NOT NULL,
@@ -57,7 +58,6 @@ CREATE TABLE IF NOT EXISTS contract (
   created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_contract_year ON contract(contract_year);
 CREATE INDEX IF NOT EXISTS idx_contract_status ON contract(contract_status);
 
 CREATE TABLE IF NOT EXISTS property (
@@ -207,11 +207,12 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO contract (
-  contract_number, contract_name, contract_type, contract_year,
+  contract_number, contract_name, contract_type, contract_owner_type, contract_date,
   contract_status, customer, starting_price, step_price, assigned_to, created_by
 )
-SELECT 'CT-2026-0001', 'Downtown commercial land auction', 'Auction', 2026,
-       'PUBLISHED', '{"name":"Example Customer","taxCode":"0000000000"}'::jsonb,
+SELECT 'CT-2026-0001', 'Downtown commercial land auction', 'HOP_DONG_MOI',
+       'TAI_SAN_THI_HANH_AN', DATE '2026-01-01',
+       'MOI', '{"name":"Example Customer","taxCode":"0000000000"}'::jsonb,
        1000000000.00, 10000000.00, u.i, u.i
 FROM "user" u
 WHERE u.email = 'admin@example.com'

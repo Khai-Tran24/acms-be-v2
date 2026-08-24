@@ -21,7 +21,7 @@ export class PropertyService {
       .leftJoinAndSelect('contractProperty.contract', 'contract');
     if (query.search)
       builder.andWhere(
-        '(property.property_name ILIKE :search OR property.property_type ILIKE :search)',
+        '(property.property_name ILIKE :search OR property.property_type ILIKE :search OR property.property_location ILIKE :search)',
         { search: `%${query.search}%` },
       );
     if (query.propertyName)
@@ -32,6 +32,10 @@ export class PropertyService {
       builder.andWhere('property.property_type ILIKE :propertyType', {
         propertyType: `%${query.propertyType}%`,
       });
+    if (query.propertyLocation)
+      builder.andWhere('property.property_location ILIKE :propertyLocation', {
+        propertyLocation: `%${query.propertyLocation}%`,
+      });
     if (query.contractId !== undefined)
       builder.andWhere('contract.id = :contractId', {
         contractId: query.contractId,
@@ -40,6 +44,7 @@ export class PropertyService {
       id: 'id',
       propertyName: 'property_name',
       propertyType: 'property_type',
+      propertyLocation: 'property_location',
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     } as const;
