@@ -36,9 +36,9 @@ export class AnalyticController {
     return this.analytics.getAssetBreakdown();
   }
 
-  @Get('charts/contracts-over-time')
-  getContractsOverTime() {
-    return this.analytics.getContractsOverTime();
+  @Get('charts/contract-owner-breakdown')
+  getContractOwnerBreakdown() {
+    return this.analytics.getContractOwnerBreakdown();
   }
 
   @Get('tables/recent-files')

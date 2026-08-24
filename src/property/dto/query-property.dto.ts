@@ -7,6 +7,7 @@ export const PROPERTY_SORT_FIELDS = [
   'id',
   'propertyName',
   'propertyType',
+  'propertyLocation',
   'createdAt',
   'updatedAt',
 ] as const;
@@ -15,6 +16,7 @@ export class QueryPropertyDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() propertyType?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() propertyLocation?: string;
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Number)

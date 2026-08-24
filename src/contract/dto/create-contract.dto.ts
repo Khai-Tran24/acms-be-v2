@@ -3,17 +3,21 @@ import { Type } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
+  IsDateString,
   IsEnum,
   IsInt,
   IsNumber,
   IsObject,
   IsOptional,
   IsString,
-  Max,
   MaxLength,
   Min,
 } from 'class-validator';
-import { ContractStatus, ContractType } from 'src/shared/enums/contract.enum';
+import {
+  ContractPropertyOwnerType,
+  ContractStatus,
+  ContractType,
+} from 'src/shared/enums/contract.enum';
 
 export class CreateContractDto {
   @ApiProperty() @IsString() @MaxLength(100) contractNumber!: string;
@@ -24,12 +28,20 @@ export class CreateContractDto {
   @IsEnum(ContractType)
   contractType!: ContractType;
 
-  @ApiProperty()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1900)
-  @Max(2200)
-  contractYear!: number;
+  @ApiPropertyOptional({ enum: ContractPropertyOwnerType })
+  @IsOptional()
+  @IsEnum(ContractPropertyOwnerType)
+  contractOwnerType?: ContractPropertyOwnerType;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date',
+    example: '2026-08-22',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsDateString()
+  contractDate?: string | null;
 
   @ApiProperty()
   @IsEnum(ContractStatus)

@@ -25,6 +25,9 @@ export class Property {
   })
   propertyType!: PropertyType;
 
+  @Column({ name: 'property_location', type: 'text', default: '' })
+  propertyLocation!: string;
+
   @OneToMany(() => ContractProperty, (item) => item.property)
   contractProperties!: ContractProperty[];
 

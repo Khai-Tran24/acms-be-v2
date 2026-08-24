@@ -3,7 +3,6 @@ import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsInt,
-  IsMilitaryTime,
   IsNumber,
   IsString,
   MaxLength,
@@ -22,7 +21,7 @@ export class CreateAnnouncementDto {
   @ApiProperty() @IsDateString() startRegisterDate!: string;
   @ApiProperty() @IsDateString() endRegisterDate!: string;
   @ApiProperty() @IsDateString() auctionDate!: string;
-  @ApiProperty({ example: '09:30' }) @IsMilitaryTime() auctionTime!: string;
+  @ApiProperty() @Type(() => Number) @IsInt() auctionTime!: number;
   @ApiProperty() @IsString() @MaxLength(100) auctionFormat!: string;
   @ApiProperty() @IsString() @MaxLength(100) auctionMethod!: string;
   @ApiProperty() @Type(() => Number) @IsInt() @Min(1) contractId!: number;

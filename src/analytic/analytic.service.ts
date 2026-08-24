@@ -136,8 +136,19 @@ export class AnalyticService {
     }));
   }
 
-  getContractsOverTime() {
-    return this.getTrends('12m');
+  async getContractOwnerBreakdown() {
+    const rows = await this.contracts
+      .createQueryBuilder('contract')
+      .select('contract.contractOwnerType', 'ownerType')
+      .addSelect('COUNT(contract.id)', 'fileCount')
+      .groupBy('contract.contractOwnerType')
+      .orderBy('COUNT(contract.id)', 'DESC')
+      .getRawMany<NumericRow>();
+
+    return rows.map((row) => ({
+      ownerType: row.ownerType,
+      fileCount: numberOf(row.fileCount),
+    }));
   }
 
   async getRecentFiles() {

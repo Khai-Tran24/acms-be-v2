@@ -1,9 +1,6 @@
 export enum ContractType {
   HOP_DONG_MOI = 'HOP_DONG_MOI',
-  HOP_DONG_BO_SUNG = 'HOP_DONG_BO_SUNG',
-  HOP_DONG_SUA_DOI = 'HOP_DONG_SUA_DOI',
   HOP_DONG_SUA_DOI_BO_SUNG = 'HOP_DONG_SUA_DOI_BO_SUNG',
-  HOP_DONG_RUT_GON = 'HOP_DONG_RUT_GON',
 }
 
 export enum ContractStatus {
@@ -13,4 +10,11 @@ export enum ContractStatus {
   DAU_GIA_THANH = 'DAU_GIA_THANH',
   TAM_DUNG = 'TAM_DUNG',
   DA_THANH_LY = 'DA_THANH_LY',
+}
+
+export enum ContractPropertyOwnerType {
+  TAI_SAN_THI_HANH_AN = 'TAI_SAN_THI_HANH_AN',
+  TAI_SAN_CONG = 'TAI_SAN_CONG',
+  TAI_SAN_CUA_TO_CHUC_TIN_DUNG = 'TAI_SAN_CUA_TO_CHUC_TIN_DUNG',
+  TAI_SAN_CUA_CAC_BEN_KHAC = 'TAI_SAN_CUA_CAC_BEN_KHAC',
 }

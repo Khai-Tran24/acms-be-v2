@@ -27,6 +27,13 @@ export class AuctionResult {
   @Column({ name: 'winning_price', type: 'decimal', precision: 18, scale: 2 })
   winningPrice!: string;
 
+  @Column({
+    name: 'auction_cost',
+    type: 'jsonb',
+    default: () => "'[]'::jsonb",
+  })
+  auctionCost!: unknown[];
+
   @Column({ name: 'completed_at', type: 'timestamp with time zone' })
   completedAt!: Date;
 
