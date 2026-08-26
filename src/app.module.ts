@@ -12,6 +12,7 @@ import { RegulationModule } from './regulation/regulation.module';
 import { AuctionResultModule } from './auction-result/auction-result.module';
 import { AnnouncementModule } from './announcement/announcement.module';
 import { UploadFileModule } from './file/upload-file.module';
+import { ExportExcelModule } from './excel/export-excel.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { UploadFileModule } from './file/upload-file.module';
     AuctionResultModule,
     AnnouncementModule,
     UploadFileModule,
+    ExportExcelModule,
   ],
   controllers: [],
   providers: [],

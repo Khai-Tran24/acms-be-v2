@@ -17,5 +17,6 @@ import { UploadFileModule } from '../file/upload-file.module';
   ],
   controllers: [ContractController],
   providers: [ContractService],
+  exports: [ContractService],
 })
 export class ContractModule {}

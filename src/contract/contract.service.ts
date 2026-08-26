@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import { ContractProperty } from '../property/entities/contract-property.entity';
 import { Property } from '../property/entities/property.entity';
@@ -48,12 +48,29 @@ export class ContractService {
   }
 
   async findAll(query: QueryContractDto) {
+    const builder = this.createFilteredQuery(query);
+    const [items, total] = await builder
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
+    return this.paginated(items, total, query.page, query.limit);
+  }
+
+  /** Returns every matching contract. Pagination is deliberately not applied. */
+  findAllForExport(query: QueryContractDto) {
+    return this.createFilteredQuery(query).getMany();
+  }
+
+  private createFilteredQuery(query: QueryContractDto) {
     const builder = this.contracts
       .createQueryBuilder('contract')
       .leftJoinAndSelect('contract.assignedTo', 'assignedTo')
       .leftJoinAndSelect('contract.createdBy', 'createdBy')
       .leftJoinAndSelect('contract.contractProperties', 'contractProperty')
-      .leftJoinAndSelect('contractProperty.property', 'property');
+      .leftJoinAndSelect('contractProperty.property', 'property')
+      .leftJoinAndSelect('contract.regulations', 'regulation')
+      .leftJoinAndSelect('contract.announcements', 'announcement')
+      .leftJoinAndSelect('contract.auctionResults', 'auctionResult');
     if (query.search) {
       builder.andWhere(
         `(contract.contract_number ILIKE :search OR contract.contract_name ILIKE :search
@@ -109,9 +126,15 @@ export class ContractService {
         createdById: query.createdById,
       });
     if (query.propertyId !== undefined)
-      builder.andWhere('property.id = :propertyId', {
-        propertyId: query.propertyId,
-      });
+      // Filter the contract through a separate join. Filtering the selected
+      // `property` alias would remove the contract's other properties from the
+      // hydrated relation and make an export look incomplete.
+      builder.innerJoin(
+        'contract.contractProperties',
+        'propertyFilter',
+        'propertyFilter.property_id = :propertyId',
+        { propertyId: query.propertyId },
+      );
     if (query.createdFrom)
       builder.andWhere('contract.created_at >= :createdFrom', {
         createdFrom: query.createdFrom,
@@ -120,16 +143,12 @@ export class ContractService {
       builder.andWhere('contract.created_at <= :createdTo', {
         createdTo: query.createdTo,
       });
-    const [items, total] = await builder
+    return builder
       .orderBy(
         `contract.${this.contractSortColumn(query.sortBy)}`,
         query.sortOrder.toUpperCase() as 'ASC' | 'DESC',
       )
-      .addOrderBy('contract.id', 'ASC')
-      .skip((query.page - 1) * query.limit)
-      .take(query.limit)
-      .getManyAndCount();
-    return this.paginated(items, total, query.page, query.limit);
+      .addOrderBy('contract.id', 'ASC');
   }
 
   async findOne(id: number) {
@@ -192,7 +211,7 @@ export class ContractService {
   }
 
   private addTextFilter(
-    builder: ReturnType<Repository<Contract>['createQueryBuilder']>,
+    builder: SelectQueryBuilder<Contract>,
     column: string,
     parameter: string,
     value?: string,
