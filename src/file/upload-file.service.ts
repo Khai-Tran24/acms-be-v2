@@ -28,6 +28,8 @@ import {
 } from './dto/file.dto';
 import { FileEntity } from './entity/file.entity';
 
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
 @Injectable()
 export class UploadFileServiceS3 {
   private readonly s3Client: S3Client;
@@ -61,6 +63,8 @@ export class UploadFileServiceS3 {
 
   async createPresignedUpload(dto: CreatePresignedUploadDto) {
     this.ensureConfigured();
+    if (dto.fileSize > MAX_FILE_SIZE)
+      throw new BadRequestException('File  must not larger than 25mb');
     const relation = await this.entityRelation(dto.entityType, dto.entityId);
     const safeName = dto.fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     if (!safeName) throw new BadRequestException('fileName is invalid');
@@ -130,7 +134,10 @@ export class UploadFileServiceS3 {
         throw new BadRequestException(
           'Uploaded object content type does not match',
         );
-      file.fileSize = Number(result.ContentLength ?? 0);
+      const fileSize = Number(result.ContentLength ?? 0);
+      if (fileSize > MAX_FILE_SIZE)
+        throw new BadRequestException('File  must not larger than 25mb');
+      file.fileSize = fileSize;
       file.status = FileStatus.ACTIVE;
       return this.files.save(file);
     } catch (error) {

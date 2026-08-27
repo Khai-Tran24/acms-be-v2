@@ -7,6 +7,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -38,6 +39,14 @@ export class CreatePresignedUploadDto {
   @IsMimeType()
   @MaxLength(255)
   fileType!: string;
+
+  @ApiProperty({ example: 1048576, maximum: 25 * 1024 * 1024 })
+  @Type(() => Number)
+  @IsInt()
+  @Max(25 * 1024 * 1024, {
+    message: 'File must not larger than 25mb',
+  })
+  fileSize!: number;
 
   @ApiProperty({ enum: FileEntityType })
   @IsEnum(FileEntityType)
