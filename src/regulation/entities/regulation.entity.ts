@@ -50,10 +50,10 @@ export class Regulation {
   @Column({ name: 'auction_time', type: 'smallint' })
   auctionTime!: number;
 
-  @Column({ name: 'auction_format', length: 100 })
+  @Column({ name: 'auction_format', length: 100, nullable: true })
   auctionFormat!: string;
 
-  @Column({ name: 'auction_method', length: 100 })
+  @Column({ name: 'auction_method', length: 100, nullable: true })
   auctionMethod!: string;
 
   @ManyToOne(() => Contract, (contract) => contract.regulations, {

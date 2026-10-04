@@ -41,6 +41,11 @@ export class AnalyticController {
     return this.analytics.getContractOwnerBreakdown();
   }
 
+  @Get('tables/upcoming-auctions')
+  getUpcomingAuctions() {
+    return this.analytics.getUpcomingAuctions();
+  }
+
   @Get('tables/recent-files')
   getRecentFiles() {
     return this.analytics.getRecentFiles();

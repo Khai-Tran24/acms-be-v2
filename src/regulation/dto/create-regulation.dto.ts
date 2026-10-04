@@ -4,6 +4,7 @@ import {
   IsDateString,
   IsInt,
   IsNumber,
+  IsOptional,
   IsString,
   MaxLength,
   Min,
@@ -22,7 +23,15 @@ export class CreateRegulationDto {
   @ApiProperty() @IsDateString() endRegisterDate!: string;
   @ApiProperty() @IsDateString() auctionDate!: string;
   @ApiProperty() @Type(() => Number) @IsInt() auctionTime!: number;
-  @ApiProperty() @IsString() @MaxLength(100) auctionFormat!: string;
-  @ApiProperty() @IsString() @MaxLength(100) auctionMethod!: string;
+  @ApiProperty()
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  auctionFormat!: string;
+  @ApiProperty()
+  @IsString()
+  @MaxLength(100)
+  @IsOptional()
+  auctionMethod!: string;
   @ApiProperty() @Type(() => Number) @IsInt() @Min(1) contractId!: number;
 }

@@ -47,6 +47,11 @@ export class ContractController {
     return this.contractService.findAll(query);
   }
 
+  @Get('report')
+  report(@Query() query: QueryContractDto) {
+    return this.contractService.getReport(query);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.contractService.findOne(+id);

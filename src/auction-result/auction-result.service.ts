@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Contract } from '../contract/entities/contract.entity';
@@ -8,6 +12,7 @@ import { QueryAuctionResultDto } from './dto/query-auction-result.dto';
 import { AuctionResult } from './entities/auction-result.entity';
 import { FileEntityType } from '../file/dto/file.dto';
 import { UploadFileServiceS3 } from '../file/upload-file.service';
+import { ContractStatus } from '../shared/enums/contract.enum';
 @Injectable()
 export class AuctionResultService {
   constructor(
@@ -19,12 +24,18 @@ export class AuctionResultService {
   ) {}
   async create(dto: CreateAuctionResultDto) {
     const { contractId, winningPrice, completedAt, ...data } = dto;
+    const contract = await this.contract(contractId);
+    if (contract.contractStatus !== ContractStatus.DAU_GIA_THANH) {
+      throw new BadRequestException(
+        'Chỉ được tạo kết quả đấu giá cho hợp đồng có trạng thái "Đấu giá thành".',
+      );
+    }
     return this.repo.save(
       this.repo.create({
         ...data,
         winningPrice: String(winningPrice),
         completedAt: new Date(completedAt),
-        contract: await this.contract(contractId),
+        contract,
       }),
     );
   }
@@ -34,7 +45,7 @@ export class AuctionResultService {
       .leftJoinAndSelect('result.contract', 'contract');
     if (query.search)
       builder.andWhere(
-        '(result.auction_result_number ILIKE :search OR CAST(result.winner AS text) ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_name ILIKE :search)',
+        '(result.auction_result_number ILIKE :search OR CAST(result.winner AS text) ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_type ILIKE :search OR contract.contract_owner_type ILIKE :search)',
         { search: `%${query.search}%` },
       );
     if (query.auctionResultNumber)

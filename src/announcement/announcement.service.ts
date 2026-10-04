@@ -51,7 +51,7 @@ export class AnnouncementService {
       .leftJoinAndSelect('announcement.contract', 'contract');
     if (query.search)
       builder.andWhere(
-        '(announcement.announcement_number ILIKE :search OR announcement.auction_format ILIKE :search OR announcement.auction_method ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_name ILIKE :search)',
+        '(announcement.announcement_number ILIKE :search OR announcement.auction_format ILIKE :search OR announcement.auction_method ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_type ILIKE :search OR contract.contract_owner_type ILIKE :search)',
         { search: `%${query.search}%` },
       );
     if (query.announcementNumber)

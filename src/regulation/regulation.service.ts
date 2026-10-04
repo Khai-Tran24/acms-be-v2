@@ -31,7 +31,7 @@ export class RegulationService {
       .leftJoinAndSelect('regulation.contract', 'contract');
     if (query.search)
       builder.andWhere(
-        '(regulation.regulation_number ILIKE :search OR regulation.auction_format ILIKE :search OR regulation.auction_method ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_name ILIKE :search)',
+        '(regulation.regulation_number ILIKE :search OR regulation.auction_format ILIKE :search OR regulation.auction_method ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_type ILIKE :search OR contract.contract_owner_type ILIKE :search)',
         { search: `%${query.search}%` },
       );
     if (query.regulationNumber)

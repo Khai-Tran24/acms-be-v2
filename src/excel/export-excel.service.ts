@@ -8,7 +8,6 @@ export enum ContractExportColumn {
   ID = 'id',
   CONTRACT_NUMBER = 'contractNumber',
   CONTRACT_DATE = 'contractDate',
-  CONTRACT_NAME = 'contractName',
   CONTRACT_TYPE = 'contractType',
   CONTRACT_OWNER_TYPE = 'contractOwnerType',
   REGULATION_NUMBER = 'regulationNumber',
@@ -128,12 +127,6 @@ export class ExportExcelService {
         width: 22,
         value: (c) => this.toDate(c.contractDate),
         numFmt: 'dd/mm/yyyy',
-      },
-      {
-        header: 'Tên hợp đồng',
-        key: ContractExportColumn.CONTRACT_NAME,
-        width: 35,
-        value: (c) => c.contractName,
       },
       {
         header: 'Loại hợp đồng',

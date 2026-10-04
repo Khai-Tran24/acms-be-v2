@@ -15,6 +15,7 @@ import { QueryContractDto } from './dto/query-contract.dto';
 import { Contract } from './entities/contract.entity';
 import { UploadFileServiceS3 } from '../file/upload-file.service';
 import { FileEntityType } from '../file/dto/file.dto';
+import { ContractStatus } from '../shared/enums/contract.enum';
 
 @Injectable()
 export class ContractService {
@@ -56,6 +57,110 @@ export class ContractService {
     return this.paginated(items, total, query.page, query.limit);
   }
 
+  async getReport(query: QueryContractDto) {
+    if (
+      [
+        [query.contractDateFrom, query.contractDateTo],
+        [query.createdFrom, query.createdTo],
+      ].some(([from, to]) => from && to && new Date(from) > new Date(to))
+    ) {
+      throw new BadRequestException(
+        'Ngày bắt đầu không thể sau ngày kết thúc.',
+      );
+    }
+    // Filter by contract IDs before aggregating: multiple assets and auction
+    // records must not multiply a contract's count or monetary values.
+    const filtered = this.createFilteredQuery(query)
+      .select('contract.id')
+      .distinct(true)
+      .orderBy();
+    const totals = this.contracts
+      .createQueryBuilder('contract')
+      .leftJoin(
+        'contract.auctionResults',
+        'latestResult',
+        `latestResult.id = (
+        SELECT r.auction_result_id FROM auction_result r
+        WHERE r.contract_id = contract.contract_id
+        ORDER BY r.completed_at DESC, r.auction_result_id DESC LIMIT 1
+      )`,
+      )
+      .where(`contract.id IN (${filtered.getQuery()})`)
+      .setParameters(filtered.getParameters())
+      .select('contract.contractStatus', 'status')
+      .addSelect('COUNT(contract.id)', 'count')
+      .addSelect('COALESCE(SUM(contract.startingPrice), 0)', 'startingPrice')
+      .addSelect('COALESCE(SUM(latestResult.winningPrice), 0)', 'winningPrice')
+      .groupBy('contract.contractStatus');
+    const [page, groups] = await Promise.all([
+      this.findAll(query),
+      totals.getRawMany<{
+        status: ContractStatus;
+        count: string;
+        startingPrice: string;
+        winningPrice: string;
+      }>(),
+    ]);
+    const statusBreakdown = Object.values(ContractStatus).map((status) => ({
+      status,
+      count: Number(
+        groups.find((group) => group.status === status)?.count ?? 0,
+      ),
+    }));
+    const totalContracts = groups.reduce(
+      (sum, group) => sum + Number(group.count),
+      0,
+    );
+    const successfulContracts = statusBreakdown
+      .filter((group) =>
+        [ContractStatus.DAU_GIA_THANH, ContractStatus.DA_THANH_LY].includes(
+          group.status,
+        ),
+      )
+      .reduce((sum, group) => sum + group.count, 0);
+    return {
+      summary: {
+        totalContracts,
+        successfulContracts,
+        successRate: totalContracts
+          ? Number(((successfulContracts / totalContracts) * 100).toFixed(1))
+          : 0,
+        totalStartingPrice: groups.reduce(
+          (sum, group) => sum + Number(group.startingPrice),
+          0,
+        ),
+        totalWinningPrice: groups.reduce(
+          (sum, group) => sum + Number(group.winningPrice),
+          0,
+        ),
+      },
+      statusBreakdown,
+      items: page.items.map((contract) => {
+        const result = [...(contract.auctionResults ?? [])].sort(
+          (a, b) =>
+            new Date(b.completedAt).getTime() -
+              new Date(a.completedAt).getTime() || b.id - a.id,
+        )[0];
+        return {
+          id: contract.id,
+          contractNumber: contract.contractNumber,
+          contractDate: contract.contractDate,
+          contractStatus: contract.contractStatus,
+          propertyNames: (contract.contractProperties ?? []).map(
+            (link) => link.property.propertyName,
+          ),
+          assignedOfficer:
+            contract.assignedTo?.fullName ||
+            contract.assignedTo?.username ||
+            null,
+          startingPrice: Number(contract.startingPrice),
+          winningPrice: result ? Number(result.winningPrice) : null,
+        };
+      }),
+      pagination: { ...page.pagination, totalItems: page.pagination.total },
+    };
+  }
+
   /** Returns every matching contract. Pagination is deliberately not applied. */
   findAllForExport(query: QueryContractDto) {
     return this.createFilteredQuery(query).getMany();
@@ -73,7 +178,7 @@ export class ContractService {
       .leftJoinAndSelect('contract.auctionResults', 'auctionResult');
     if (query.search) {
       builder.andWhere(
-        `(contract.contract_number ILIKE :search OR contract.contract_name ILIKE :search
+        `(contract.contract_number ILIKE :search
           OR CAST(contract.contract_type AS text) ILIKE :search
           OR CAST(contract.contract_owner_type AS text) ILIKE :search
           OR CAST(contract.contract_status AS text) ILIKE :search
@@ -86,12 +191,6 @@ export class ContractService {
       'contract.contract_number',
       'contractNumber',
       query.contractNumber,
-    );
-    this.addTextFilter(
-      builder,
-      'contract.contract_name',
-      'contractName',
-      query.contractName,
     );
     this.addTextFilter(
       builder,
@@ -227,7 +326,6 @@ export class ContractService {
       {
         id: 'id',
         contractNumber: 'contract_number',
-        contractName: 'contract_name',
         contractType: 'contract_type',
         contractOwnerType: 'contract_owner_type',
         contractDate: 'contract_date',

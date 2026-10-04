@@ -151,6 +151,60 @@ export class AnalyticService {
     }));
   }
 
+  async getUpcomingAuctions() {
+    // Use the latest regulation's schedule before filtering by auction date.
+    // Successful and liquidated contracts are no longer upcoming.
+    return this.contracts
+      .createQueryBuilder('contract')
+      .leftJoin(
+        'contract.regulations',
+        'regulation',
+        `regulation.id = (
+        SELECT r.regulation_id FROM regulation r
+        WHERE r.contract_id = contract.contract_id
+        ORDER BY r.created_at DESC, r.regulation_id DESC LIMIT 1
+      )`,
+      )
+      .leftJoin('contract.assignedTo', 'officer')
+      .leftJoin('contract.contractProperties', 'link')
+      .leftJoin('link.property', 'property')
+      .select('contract.id', 'id')
+      .addSelect('contract.contractNumber', 'contractNumber')
+      .addSelect('contract.contractStatus', 'status')
+      .addSelect(
+        "COALESCE(STRING_AGG(DISTINCT property.propertyName, ', '), 'Chưa xác định')",
+        'assetName',
+      )
+      .addSelect(
+        "COALESCE(NULLIF(officer.fullName, ''), officer.username, 'Chưa phân công')",
+        'assignedOfficer',
+      )
+      .addSelect('regulation.auctionDate', 'auctionDate')
+      .addSelect('regulation.endRegisterDate', 'endRegisterDate')
+      .where('regulation.auctionDate > :now', { now: new Date() })
+      .andWhere('contract.contractStatus NOT IN (:...completedStatuses)', {
+        completedStatuses: [
+          ContractStatus.DAU_GIA_THANH,
+          ContractStatus.DA_THANH_LY,
+        ],
+      })
+      .groupBy('contract.id')
+      .addGroupBy('officer.id')
+      .addGroupBy('regulation.id')
+      .orderBy('"auctionDate"', 'ASC')
+      .addOrderBy('contract.id', 'ASC')
+      .limit(10)
+      .getRawMany<{
+        id: number;
+        contractNumber: string;
+        status: ContractStatus;
+        assetName: string;
+        assignedOfficer: string;
+        auctionDate: Date;
+        endRegisterDate: Date;
+      }>();
+  }
+
   async getRecentFiles() {
     const rows = await this.contracts.find({
       relations: { assignedTo: true, contractProperties: { property: true } },
@@ -162,7 +216,7 @@ export class AnalyticService {
       fileCode: contract.contractNumber,
       assetName:
         contract.contractProperties[0]?.property.propertyName ??
-        contract.contractName,
+        'Chưa xác định',
       createdDate: contract.createdAt,
       status: contract.contractStatus,
       assignedOfficer: contract.assignedTo?.fullName ?? 'Chưa phân công',

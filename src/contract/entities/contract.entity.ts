@@ -30,9 +30,6 @@ export class Contract {
   @Column({ name: 'contract_number', length: 100, unique: true })
   contractNumber!: string;
 
-  @Column({ name: 'contract_name', length: 255 })
-  contractName!: string;
-
   @Column({
     name: 'contract_type',
     type: 'enum',

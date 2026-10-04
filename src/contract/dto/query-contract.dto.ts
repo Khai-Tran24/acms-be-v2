@@ -14,7 +14,6 @@ import { ContractPropertyOwnerType } from '../../shared/enums/contract.enum';
 export const CONTRACT_SORT_FIELDS = [
   'id',
   'contractNumber',
-  'contractName',
   'contractType',
   'contractOwnerType',
   'contractDate',
@@ -28,7 +27,6 @@ export const CONTRACT_SORT_FIELDS = [
 export class QueryContractDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() contractNumber?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() contractName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() contractType?: string;
   @ApiPropertyOptional({ enum: ContractPropertyOwnerType })
   @IsOptional()

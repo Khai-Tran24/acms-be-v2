@@ -22,8 +22,6 @@ import {
 export class CreateContractDto {
   @ApiProperty() @IsString() @MaxLength(100) contractNumber!: string;
 
-  @ApiProperty() @IsString() @MaxLength(255) contractName!: string;
-
   @ApiProperty()
   @IsEnum(ContractType)
   contractType!: ContractType;
