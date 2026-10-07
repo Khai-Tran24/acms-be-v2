@@ -6,11 +6,16 @@ import {
   IsInt,
   IsNumber,
   IsObject,
+  IsOptional,
   IsString,
   MaxLength,
   Min,
 } from 'class-validator';
 export class CreateAuctionResultDto {
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  note?: string | null;
   @ApiProperty() @IsString() @MaxLength(100) auctionResultNumber!: string;
   @ApiProperty({ type: Object }) @IsObject() winner!: Record<string, unknown>;
   @ApiProperty() @Type(() => Number) @IsNumber() @Min(0) winningPrice!: number;

@@ -1,3 +1,4 @@
+import { validateRegulation } from '../shared/utils/auction-validation.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,6 +19,7 @@ export class RegulationService {
   ) {}
   async create(dto: CreateRegulationDto) {
     const { contractId, ...values } = dto;
+    validateRegulation(values);
     return this.repo.save(
       this.repo.create({
         ...this.money(values),
@@ -31,7 +33,7 @@ export class RegulationService {
       .leftJoinAndSelect('regulation.contract', 'contract');
     if (query.search)
       builder.andWhere(
-        '(regulation.regulation_number ILIKE :search OR regulation.auction_format ILIKE :search OR regulation.auction_method ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_type ILIKE :search OR contract.contract_owner_type ILIKE :search)',
+        '(regulation.regulation_number ILIKE :search OR CAST(regulation.auction_format AS text) ILIKE :search OR CAST(regulation.auction_method AS text) ILIKE :search OR contract.contract_number ILIKE :search OR CAST(contract.contract_type AS text) ILIKE :search OR CAST(contract.contract_owner_type AS text) ILIKE :search)',
         { search: `%${query.search}%` },
       );
     if (query.regulationNumber)
@@ -39,12 +41,12 @@ export class RegulationService {
         regulationNumber: `%${query.regulationNumber}%`,
       });
     if (query.auctionFormat)
-      builder.andWhere('regulation.auction_format ILIKE :auctionFormat', {
-        auctionFormat: `%${query.auctionFormat}%`,
+      builder.andWhere('regulation.auction_format = :auctionFormat', {
+        auctionFormat: query.auctionFormat,
       });
     if (query.auctionMethod)
-      builder.andWhere('regulation.auction_method ILIKE :auctionMethod', {
-        auctionMethod: `%${query.auctionMethod}%`,
+      builder.andWhere('regulation.auction_method = :auctionMethod', {
+        auctionMethod: query.auctionMethod,
       });
     if (query.contractId !== undefined)
       builder.andWhere('contract.id = :contractId', {
@@ -95,6 +97,7 @@ export class RegulationService {
   async update(id: number, dto: UpdateRegulationDto) {
     const item = await this.findEntity(id);
     const { contractId, ...values } = dto;
+    validateRegulation({ ...item, ...values });
     Object.assign(item, this.money(values));
     if (contractId) item.contract = await this.contract(contractId);
     return this.repo.save(item);
@@ -129,7 +132,6 @@ export class RegulationService {
         startRegisterDate: 'start_register_date',
         endRegisterDate: 'end_register_date',
         auctionDate: 'auction_date',
-        auctionTime: 'auction_time',
         createdAt: 'created_at',
         updatedAt: 'updated_at',
       } as const

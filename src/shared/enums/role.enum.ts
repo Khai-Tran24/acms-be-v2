@@ -1,4 +1,5 @@
 export enum Role {
+  NHAN_VIEN_BAN_HO_SO = 'NHAN_VIEN_BAN_HO_SO',
   ADMIN = 'ADMIN',
   DAU_GIA_VIEN = 'DAU_GIA_VIEN',
   THU_KY = 'THU_KY',

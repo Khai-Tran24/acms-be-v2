@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsIn,
@@ -25,6 +26,18 @@ export const CONTRACT_SORT_FIELDS = [
 ] as const;
 
 export class QueryContractDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'Exclude successful, cancelled, and liquidated contracts from selection.',
+    type: Boolean,
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  selectableOnly?: boolean;
+
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() contractNumber?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() contractType?: string;

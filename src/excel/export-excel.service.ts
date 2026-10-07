@@ -7,6 +7,7 @@ import { Contract } from '../contract/entities/contract.entity';
 export enum ContractExportColumn {
   ID = 'id',
   CONTRACT_NUMBER = 'contractNumber',
+  PARENT_CONTRACT = 'parentContract',
   CONTRACT_DATE = 'contractDate',
   CONTRACT_TYPE = 'contractType',
   CONTRACT_OWNER_TYPE = 'contractOwnerType',
@@ -15,7 +16,6 @@ export enum ContractExportColumn {
   START_REGISTER_DATE = 'startRegisterDate',
   END_REGISTER_DATE = 'endRegisterDate',
   AUCTION_DATE = 'auctionDate',
-  AUCTION_TIME = 'auctionTime',
   CUSTOMER = 'customer',
   PROPERTY_NAME = 'propertyName',
   PROPERTY_TYPE = 'propertyType',
@@ -119,7 +119,16 @@ export class ExportExcelService {
         header: 'Số hợp đồng',
         key: ContractExportColumn.CONTRACT_NUMBER,
         width: 20,
-        value: (c) => c.contractNumber,
+        value: (c) => c.contractNumber || `#${c.id}`,
+      },
+      {
+        header: 'Hợp đồng cha',
+        key: ContractExportColumn.PARENT_CONTRACT,
+        width: 24,
+        value: (c) =>
+          c.parentContractId
+            ? c.parentContract?.contractNumber || `#${c.parentContractId}`
+            : '',
       },
       {
         header: 'Ngày ký kết hợp đồng',
@@ -181,12 +190,7 @@ export class ExportExcelService {
             ?.map((r) => this.formatDateTime(r.auctionDate))
             .join('\n') ?? '',
       },
-      {
-        header: 'Thời gian đấu giá (phút)',
-        key: ContractExportColumn.AUCTION_TIME,
-        width: 20,
-        value: (c) => c.regulations?.map((r) => r.auctionTime).join('\n') ?? '',
-      },
+
       {
         header: 'Khách hàng',
         key: ContractExportColumn.CUSTOMER,
@@ -322,7 +326,7 @@ export class ExportExcelService {
       contracts.flatMap((contract) =>
         (contract.contractProperties ?? []).map(({ property }) => ({
           contractId: contract.id,
-          contractNumber: contract.contractNumber,
+          contractNumber: contract.contractNumber || `#${contract.id}`,
           propertyId: property.id,
           propertyName: property.propertyName,
           propertyType: property.propertyType,
@@ -346,14 +350,13 @@ export class ExportExcelService {
         { header: 'Bắt đầu đăng ký', key: 'startRegisterDate', width: 22 },
         { header: 'Kết thúc đăng ký', key: 'endRegisterDate', width: 22 },
         { header: 'Ngày đấu giá', key: 'auctionDate', width: 22 },
-        { header: 'Thời gian (phút)', key: 'auctionTime', width: 18 },
         { header: 'Hình thức', key: 'auctionFormat', width: 25 },
         { header: 'Phương thức', key: 'auctionMethod', width: 25 },
       ],
       contracts.flatMap((contract) =>
         (contract.regulations ?? []).map((regulation) => ({
           contractId: contract.id,
-          contractNumber: contract.contractNumber,
+          contractNumber: contract.contractNumber || `#${contract.id}`,
           regulationId: regulation.id,
           regulationNumber: regulation.regulationNumber,
           startingPrice: Number(regulation.startingPrice),
@@ -363,7 +366,6 @@ export class ExportExcelService {
           startRegisterDate: this.toDate(regulation.startRegisterDate),
           endRegisterDate: this.toDate(regulation.endRegisterDate),
           auctionDate: this.toDate(regulation.auctionDate),
-          auctionTime: regulation.auctionTime,
           auctionFormat: regulation.auctionFormat,
           auctionMethod: regulation.auctionMethod,
         })),
@@ -394,14 +396,13 @@ export class ExportExcelService {
         { header: 'Bắt đầu đăng ký', key: 'startRegisterDate', width: 22 },
         { header: 'Kết thúc đăng ký', key: 'endRegisterDate', width: 22 },
         { header: 'Ngày đấu giá', key: 'auctionDate', width: 22 },
-        { header: 'Thời gian (phút)', key: 'auctionTime', width: 18 },
         { header: 'Hình thức', key: 'auctionFormat', width: 25 },
         { header: 'Phương thức', key: 'auctionMethod', width: 25 },
       ],
       contracts.flatMap((contract) =>
         (contract.announcements ?? []).map((announcement) => ({
           contractId: contract.id,
-          contractNumber: contract.contractNumber,
+          contractNumber: contract.contractNumber || `#${contract.id}`,
           announcementId: announcement.id,
           announcementNumber: announcement.announcementNumber,
           startingPrice: Number(announcement.startingPrice),
@@ -411,7 +412,6 @@ export class ExportExcelService {
           startRegisterDate: this.toDate(announcement.startRegisterDate),
           endRegisterDate: this.toDate(announcement.endRegisterDate),
           auctionDate: this.toDate(announcement.auctionDate),
-          auctionTime: announcement.auctionTime,
           auctionFormat: announcement.auctionFormat,
           auctionMethod: announcement.auctionMethod,
         })),
@@ -442,7 +442,7 @@ export class ExportExcelService {
       contracts.flatMap((contract) =>
         (contract.auctionResults ?? []).map((result) => ({
           contractId: contract.id,
-          contractNumber: contract.contractNumber,
+          contractNumber: contract.contractNumber || `#${contract.id}`,
           resultId: result.id,
           resultNumber: result.auctionResultNumber,
           winner: this.formatObject(result.winner),

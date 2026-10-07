@@ -1,3 +1,4 @@
+import { AuctionFormat, AuctionMethod } from '../../shared/enums/contract.enum';
 import {
   Column,
   CreateDateColumn,
@@ -47,14 +48,23 @@ export class Regulation {
   @Column({ name: 'auction_date', type: 'timestamp with time zone' })
   auctionDate!: Date;
 
-  @Column({ name: 'auction_time', type: 'smallint' })
-  auctionTime!: number;
+  @Column({
+    name: 'auction_format',
+    type: 'enum',
+    enum: AuctionFormat,
+    enumName: 'auction_format_enum',
+    nullable: true,
+  })
+  auctionFormat!: AuctionFormat | null;
 
-  @Column({ name: 'auction_format', length: 100, nullable: true })
-  auctionFormat!: string;
-
-  @Column({ name: 'auction_method', length: 100, nullable: true })
-  auctionMethod!: string;
+  @Column({
+    name: 'auction_method',
+    type: 'enum',
+    enum: AuctionMethod,
+    enumName: 'auction_method_enum',
+    nullable: true,
+  })
+  auctionMethod!: AuctionMethod | null;
 
   @ManyToOne(() => Contract, (contract) => contract.regulations, {
     onDelete: 'CASCADE',

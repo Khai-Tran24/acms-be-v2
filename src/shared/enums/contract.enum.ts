@@ -12,9 +12,27 @@ export enum ContractStatus {
   DA_HUY = 'DA_HUY',
 }
 
+export const CLOSED_CONTRACT_STATUSES = [
+  ContractStatus.DAU_GIA_THANH,
+  ContractStatus.DA_HUY,
+  ContractStatus.DA_THANH_LY,
+];
+
 export enum ContractPropertyOwnerType {
   TAI_SAN_THI_HANH_AN = 'TAI_SAN_THI_HANH_AN',
   TAI_SAN_CONG = 'TAI_SAN_CONG',
   TAI_SAN_CUA_TO_CHUC_TIN_DUNG = 'TAI_SAN_CUA_TO_CHUC_TIN_DUNG',
   TAI_SAN_CUA_CAC_BEN_KHAC = 'TAI_SAN_CUA_CAC_BEN_KHAC',
+}
+
+export enum AuctionFormat {
+  DAU_GIA_TRUC_TIEP_BANG_LOI_NO = 'TRUC_TIEP_BANG_LOI_NO',
+  DAU_GIA_BANG_BO_PHIEU_TRUC_TIEP = 'BANG_BO_PHIEU_TRUC_TIEP',
+  DAU_GIA_BANG_BO_PHIEU_GIAN_TIEP = 'BANG_BO_PHIEU_GIAN_TIEP',
+  DAU_GIA_TRUC_TUYEN = 'TRUC_TUYEN',
+}
+
+export enum AuctionMethod {
+  TRA_GIA_LEN = 'TRA_GIA_LEN',
+  DAT_GIA_XUONG = 'DAT_GIA_XUONG',
 }

@@ -16,15 +16,21 @@ import {
 import {
   ContractPropertyOwnerType,
   ContractStatus,
-  ContractType,
 } from 'src/shared/enums/contract.enum';
 
 export class CreateContractDto {
-  @ApiProperty() @IsString() @MaxLength(100) contractNumber!: string;
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  contractNumber?: string | null;
 
-  @ApiProperty()
-  @IsEnum(ContractType)
-  contractType!: ContractType;
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  parentContractId?: number | null;
 
   @ApiPropertyOptional({ enum: ContractPropertyOwnerType })
   @IsOptional()

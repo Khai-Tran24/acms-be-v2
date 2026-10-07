@@ -1,7 +1,9 @@
+import { AuctionFormat, AuctionMethod } from '../../shared/enums/contract.enum';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
+  IsEnum,
   IsIn,
   IsInt,
   IsOptional,
@@ -19,7 +21,6 @@ export const REGULATION_SORT_FIELDS = [
   'startRegisterDate',
   'endRegisterDate',
   'auctionDate',
-  'auctionTime',
   'createdAt',
   'updatedAt',
 ] as const;
@@ -27,8 +28,14 @@ export const REGULATION_SORT_FIELDS = [
 export class QueryRegulationDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() regulationNumber?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() auctionFormat?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() auctionMethod?: string;
+  @ApiPropertyOptional({ enum: AuctionFormat })
+  @IsOptional()
+  @IsEnum(AuctionFormat)
+  auctionFormat?: AuctionFormat;
+  @ApiPropertyOptional({ enum: AuctionMethod })
+  @IsOptional()
+  @IsEnum(AuctionMethod)
+  auctionMethod?: AuctionMethod;
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Number)

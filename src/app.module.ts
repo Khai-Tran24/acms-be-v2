@@ -1,3 +1,4 @@
+import { AuctionRegistrationModule } from './auction-registration/auction-registration.module';
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { ContractModule } from './contract/contract.module';
@@ -43,6 +44,7 @@ import { ExportExcelModule } from './excel/export-excel.module';
     PropertyModule,
     RegulationModule,
     AuctionResultModule,
+    AuctionRegistrationModule,
     AnnouncementModule,
     UploadFileModule,
     ExportExcelModule,

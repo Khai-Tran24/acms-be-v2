@@ -1,4 +1,5 @@
 import {
+  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -22,13 +23,42 @@ import {
 } from 'src/shared/enums/contract.enum';
 
 @Entity('contract')
+@Check(
+  'contract_parent_not_self',
+  '"parent_contract_id" IS NULL OR "parent_contract_id" <> "contract_id"',
+)
 export class Contract {
   @PrimaryGeneratedColumn({ name: 'contract_id' })
   id!: number;
 
   @Index()
-  @Column({ name: 'contract_number', length: 100, unique: true })
-  contractNumber!: string;
+  @Column({
+    name: 'contract_number',
+    type: 'varchar',
+    length: 100,
+    unique: true,
+    nullable: true,
+  })
+  contractNumber!: string | null;
+
+  @Index('contract_parent_idx')
+  @Column({ name: 'parent_contract_id', type: 'int', nullable: true })
+  parentContractId!: number | null;
+
+  @ManyToOne(() => Contract, (contract) => contract.childContracts, {
+    nullable: true,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({
+    name: 'parent_contract_id',
+    foreignKeyConstraintName: 'contract_parent_fk',
+  })
+  parentContract!: Contract | null;
+
+  @OneToMany(() => Contract, (contract) => contract.parentContract, {
+    persistence: false,
+  })
+  childContracts!: Contract[];
 
   @Column({
     name: 'contract_type',

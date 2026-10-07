@@ -40,7 +40,7 @@ export class AnalyticService {
             'successful',
           )
           .setParameters({
-            inProgress: [ContractStatus.MOI, ContractStatus.DANG_DAU_GIA],
+            inProgress: [ContractStatus.DANG_DAU_GIA],
             successful: [
               ContractStatus.DAU_GIA_THANH,
               ContractStatus.DA_THANH_LY,
@@ -196,7 +196,7 @@ export class AnalyticService {
       .limit(10)
       .getRawMany<{
         id: number;
-        contractNumber: string;
+        contractNumber: string | null;
         status: ContractStatus;
         assetName: string;
         assignedOfficer: string;
@@ -213,7 +213,7 @@ export class AnalyticService {
     });
     return rows.map((contract) => ({
       id: contract.id,
-      fileCode: contract.contractNumber,
+      fileCode: contract.contractNumber || `#${contract.id}`,
       assetName:
         contract.contractProperties[0]?.property.propertyName ??
         'Chưa xác định',
@@ -236,7 +236,7 @@ export class AnalyticService {
       )[0];
       return {
         id: contract.id,
-        fileCode: contract.contractNumber,
+        fileCode: contract.contractNumber || `#${contract.id}`,
         startingPrice: numberOf(contract.startingPrice),
         winningPrice: numberOf(latestResult?.winningPrice),
         auctioneer: contract.assignedTo?.fullName ?? 'Chưa phân công',

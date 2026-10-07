@@ -21,6 +21,9 @@ export class AuctionResult {
   @Column({ name: 'auction_result_number', length: 100, unique: true })
   auctionResultNumber!: string;
 
+  @Column({ type: 'text', nullable: true })
+  note!: string | null;
+
   @Column({ type: 'jsonb' })
   winner!: Record<string, unknown>;
 

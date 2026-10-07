@@ -1,10 +1,14 @@
-import { BadRequestException } from '@nestjs/common';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { userInfo } from 'node:os';
 import { Contract } from '../contract/entities/contract.entity';
 import { ContractService } from '../contract/contract.service';
 import { QueryContractDto } from '../contract/dto/query-contract.dto';
 import {
+  AuctionFormat,
+  AuctionMethod,
   ContractStatus,
   ContractType,
   ContractPropertyOwnerType,
@@ -18,6 +22,10 @@ import { AuctionResult } from '../auction-result/entities/auction-result.entity'
 import { FileEntity } from '../file/entity/file.entity';
 import { UploadFileServiceS3 } from '../file/upload-file.service';
 import { AnalyticService } from './analytic.service';
+import { RegulationService } from '../regulation/regulation.service';
+import { AnnouncementService } from '../announcement/announcement.service';
+import { QueryRegulationDto } from '../regulation/dto/query-regulation.dto';
+import { QueryAnnouncementDto } from '../announcement/dto/query-announcement.dto';
 
 // Opt in only with an isolated PostgreSQL socket, never the application DB.
 const socket = process.env.REPORT_TEST_SOCKET;
@@ -55,7 +63,9 @@ integration('Contract reports and upcoming auctions (PostgreSQL)', () => {
       db.getRepository(User),
       db.getRepository(Property),
       db.getRepository(ContractProperty),
-      {} as UploadFileServiceS3,
+      {
+        activeFiles: () => Promise.resolve([]),
+      } as unknown as UploadFileServiceS3,
     );
     analytics = new AnalyticService(
       db.getRepository(Contract),
@@ -100,8 +110,8 @@ integration('Contract reports and upcoming auctions (PostgreSQL)', () => {
       endRegisterDate: daysFromNow(days - 1),
       auctionDate: daysFromNow(days),
       auctionTime: 60,
-      auctionFormat: 'Trực tiếp',
-      auctionMethod: 'Trả giá lên',
+      auctionFormat: AuctionFormat.DAU_GIA_TRUC_TIEP_BANG_LOI_NO,
+      auctionMethod: AuctionMethod.TRA_GIA_LEN,
     };
     return announcement
       ? db
@@ -111,6 +121,266 @@ integration('Contract reports and upcoming auctions (PostgreSQL)', () => {
           .getRepository(Regulation)
           .save({ ...data, regulationNumber: `QC-${++sequence}` });
   };
+
+  const create = (extra = {}) =>
+    reports.create({
+      contractStatus: ContractStatus.MOI,
+      startingPrice: 100,
+      stepPrice: 10,
+      ...extra,
+    });
+
+  it('derives types, allows missing numbers, and inherits properties for resales', async () => {
+    const asset = await db
+      .getRepository(Property)
+      .save({ propertyName: 'Resale asset' });
+    const root = await create({
+      contractNumber: '  ROOT-1  ',
+      propertyIds: [asset.id],
+    });
+    const child = await create({ parentContractId: root.id });
+    const sibling = await create({
+      parentContractId: root.id,
+      contractNumber: '',
+      propertyIds: [],
+    });
+    expect(root.contractType).toBe(ContractType.HOP_DONG_MOI);
+    expect(root.contractNumber).toBe('ROOT-1');
+    expect(child.contractType).toBe(ContractType.HOP_DONG_SUA_DOI_BO_SUNG);
+    expect(child.contractNumber).toBeNull();
+    expect(child.parentContract?.id).toBe(root.id);
+    expect(child.contractProperties.map((link) => link.property.id)).toEqual([
+      asset.id,
+    ]);
+    expect(sibling.contractNumber).toBeNull();
+    expect(sibling.contractProperties).toEqual([]);
+    expect(
+      (await reports.findOne(root.id)).childContracts
+        .map((item) => item.id)
+        .sort(),
+    ).toEqual([child.id, sibling.id]);
+    await expect(create({ contractNumber: 'ROOT-1' })).rejects.toThrow(
+      ConflictException,
+    );
+    await expect(
+      reports.update(child.id, { contractNumber: 'ROOT-1' }),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('rejects amendment parents, derives types on update, and prevents orphaning children', async () => {
+    const root = await create();
+    const child = await create({ parentContractId: root.id });
+    await expect(create({ parentContractId: child.id })).rejects.toThrow(
+      BadRequestException,
+    );
+    const grandchild = await create({ parentContractId: root.id });
+    await expect(create({ parentContractId: 99999 })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(
+      reports.update(root.id, { parentContractId: root.id }),
+    ).rejects.toThrow(BadRequestException);
+    await expect(
+      reports.update(root.id, { parentContractId: grandchild.id }),
+    ).rejects.toThrow(BadRequestException);
+    await expect(reports.remove(root.id)).rejects.toThrow(ConflictException);
+    expect(
+      (await reports.update(child.id, { startingPrice: 200 })).contractType,
+    ).toBe(ContractType.HOP_DONG_SUA_DOI_BO_SUNG);
+    expect(
+      (await reports.update(grandchild.id, { parentContractId: null }))
+        .contractType,
+    ).toBe(ContractType.HOP_DONG_MOI);
+    expect(
+      (await reports.update(grandchild.id, { parentContractId: root.id }))
+        .contractType,
+    ).toBe(ContractType.HOP_DONG_SUA_DOI_BO_SUNG);
+  });
+
+  it('returns the complete family for number, property name/location and property ID searches', async () => {
+    const asset = await db.getRepository(Property).save({
+      propertyName: 'Resale building',
+      propertyLocation: 'Unique location',
+    });
+    const root = await create({ contractNumber: 'ROOT-SEARCH' });
+    const child = await create({
+      parentContractId: root.id,
+      contractNumber: 'CHILD-SEARCH',
+      propertyIds: [asset.id],
+    });
+    // Legacy nested amendments remain searchable even though new nesting is forbidden.
+    const grandchild = await db.getRepository(Contract).save({
+      parentContractId: child.id,
+      contractType: ContractType.HOP_DONG_SUA_DOI_BO_SUNG,
+      startingPrice: '100',
+      stepPrice: '10',
+    });
+    const sibling = await create({ parentContractId: root.id });
+    await create({ contractNumber: 'UNRELATED' });
+    const expected = [root.id, child.id, grandchild.id, sibling.id];
+    for (const filter of [
+      { search: 'ROOT-SEARCH' },
+      { search: 'CHILD-SEARCH' },
+      { contractNumber: 'ROOT-SEARCH' },
+      { contractNumber: 'CHILD-SEARCH' },
+      { search: 'Resale building' },
+      { search: 'Unique location' },
+      { propertyId: asset.id },
+    ]) {
+      const query = Object.assign(new QueryContractDto(), filter, {
+        sortBy: 'id',
+        sortOrder: 'ASC',
+        limit: 2,
+      });
+      const first = await reports.findAll(query);
+      expect(first.items.map((item) => item.id)).toEqual(expected.slice(0, 2));
+      expect(first.pagination.total).toBe(4);
+      expect(
+        (await reports.findAll({ ...query, page: 2 })).items.map(
+          (item) => item.id,
+        ),
+      ).toEqual(expected.slice(2));
+      expect(
+        (await reports.findAllForExport(query)).map((item) => item.id),
+      ).toEqual(expected);
+      expect((await reports.getReport(query)).summary.totalContracts).toBe(4);
+    }
+  });
+
+  it('filters PostgreSQL auction enums and supports keyword searches on both auction resources', async () => {
+    const root = await contract();
+    const regulation = await schedule(root, 2);
+    const announcement = await schedule(root, 2, true);
+    const regulations = new RegulationService(
+      db.getRepository(Regulation),
+      db.getRepository(Contract),
+      {} as UploadFileServiceS3,
+    );
+    const announcements = new AnnouncementService(
+      db.getRepository(Announcement),
+      db.getRepository(Contract),
+      {} as UploadFileServiceS3,
+    );
+    const filter = {
+      search: 'TRA_GIA_LEN',
+      auctionMethod: AuctionMethod.TRA_GIA_LEN,
+      auctionFormat: AuctionFormat.DAU_GIA_TRUC_TIEP_BANG_LOI_NO,
+    };
+    expect(
+      (
+        await regulations.findAll(
+          Object.assign(new QueryRegulationDto(), filter),
+        )
+      ).items.map((item) => item.id),
+    ).toEqual([regulation.id]);
+    expect(
+      (
+        await announcements.findAll(
+          Object.assign(new QueryAnnouncementDto(), filter),
+        )
+      ).items.map((item) => item.id),
+    ).toEqual([announcement.id]);
+    await db
+      .getRepository(Announcement)
+      .update(announcement.id, { auctionFormat: null, auctionMethod: null });
+    expect(
+      (
+        await announcements.findAll(
+          Object.assign(new QueryAnnouncementDto(), filter),
+        )
+      ).items,
+    ).toEqual([]);
+  });
+
+  it('rolls back contract creation and updates when a property is invalid', async () => {
+    const root = await create();
+    await expect(
+      create({ parentContractId: root.id, propertyIds: [99999] }),
+    ).rejects.toThrow(BadRequestException);
+    expect(await db.getRepository(Contract).count()).toBe(1);
+    const child = await create({ parentContractId: root.id });
+    await expect(
+      reports.update(child.id, {
+        parentContractId: null,
+        propertyIds: [99999],
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect((await reports.findOne(child.id)).parentContractId).toBe(root.id);
+  });
+
+  it.each([false, true])(
+    'migrates legacy schema safely (unknown value: %s)',
+    async (unknownValue) => {
+      const runner = db.createQueryRunner();
+      await runner.connect();
+      try {
+        await runner.query('CREATE SCHEMA migration_fixture');
+        await runner.query('SET search_path TO migration_fixture, public');
+        await runner.query(`
+        CREATE TABLE contract (contract_id serial PRIMARY KEY, contract_number varchar(100) NOT NULL UNIQUE);
+        CREATE TABLE regulation (auction_format varchar(100), auction_method varchar(100));
+        CREATE TABLE announcement (auction_format varchar(100) NOT NULL, auction_method varchar(100) NOT NULL);
+        INSERT INTO contract (contract_number) VALUES ('EXISTING');
+        INSERT INTO regulation VALUES ('Trực tiếp', 'Trả giá lên'), ('', '');
+        INSERT INTO announcement VALUES ('Bỏ phiếu gián tiếp', 'Đặt giá xuống');
+      `);
+        if (unknownValue)
+          await runner.query(
+            "UPDATE regulation SET auction_format = 'Unknown legacy value'",
+          );
+        const migration = readFileSync(
+          resolve(
+            __dirname,
+            '../../migrations/20261006-contract-family-auction-enums.sql',
+          ),
+          'utf8',
+        );
+        if (unknownValue) {
+          await expect(runner.query(migration)).rejects.toThrow(
+            'invalid input value for enum',
+          );
+          await runner.query('ROLLBACK');
+          expect(await runner.query('SELECT * FROM contract')).toEqual([
+            { contract_id: 1, contract_number: 'EXISTING' },
+          ]);
+          expect(
+            await runner.query('SELECT auction_format FROM regulation LIMIT 1'),
+          ).toEqual([{ auction_format: 'Unknown legacy value' }]);
+        } else {
+          await runner.query(migration);
+          expect(await runner.query('SELECT * FROM regulation')).toEqual([
+            {
+              auction_format: 'TRUC_TIEP_BANG_LOI_NO',
+              auction_method: 'TRA_GIA_LEN',
+            },
+            { auction_format: null, auction_method: null },
+          ]);
+          expect(await runner.query('SELECT * FROM announcement')).toEqual([
+            {
+              auction_format: 'BANG_BO_PHIEU_GIAN_TIEP',
+              auction_method: 'DAT_GIA_XUONG',
+            },
+          ]);
+          await runner.query(
+            'INSERT INTO contract (parent_contract_id) VALUES (1), (1)',
+          );
+          await expect(
+            runner.query('DELETE FROM contract WHERE contract_id = 1'),
+          ).rejects.toThrow();
+          await expect(
+            runner.query(
+              'UPDATE contract SET parent_contract_id = contract_id',
+            ),
+          ).rejects.toThrow();
+        }
+      } finally {
+        await runner.query('ROLLBACK');
+        await runner.query('SET search_path TO public');
+        await runner.query('DROP SCHEMA IF EXISTS migration_fixture CASCADE');
+        await runner.release();
+      }
+    },
+  );
 
   it('counts each contract once and uses its latest result across all pages', async () => {
     const first = await contract(ContractStatus.DAU_GIA_THANH);
@@ -207,8 +477,8 @@ integration('Contract reports and upcoming auctions (PostgreSQL)', () => {
       await db.getRepository(Contract).update(included.id, {
         contractType: ContractType.HOP_DONG_SUA_DOI_BO_SUNG,
         contractOwnerType: ContractPropertyOwnerType.TAI_SAN_CONG,
-        assignedTo: officer,
-        createdBy: officer,
+        assignedTo: { id: officer.id },
+        createdBy: { id: officer.id },
         createdAt: new Date('2026-02-15T12:00:00Z'),
       });
       await db.getRepository(Contract).update(excluded.id, {

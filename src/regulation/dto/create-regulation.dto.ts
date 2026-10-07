@@ -1,7 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
+  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
@@ -9,6 +10,8 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { AuctionFormat, AuctionMethod } from '../../shared/enums/contract.enum';
+
 export class CreateRegulationDto {
   @ApiProperty() @IsString() @MaxLength(100) regulationNumber!: string;
   @ApiProperty() @Type(() => Number) @IsNumber() @Min(0) startingPrice!: number;
@@ -22,16 +25,14 @@ export class CreateRegulationDto {
   @ApiProperty() @IsDateString() startRegisterDate!: string;
   @ApiProperty() @IsDateString() endRegisterDate!: string;
   @ApiProperty() @IsDateString() auctionDate!: string;
-  @ApiProperty() @Type(() => Number) @IsInt() auctionTime!: number;
-  @ApiProperty()
-  @IsString()
-  @MaxLength(100)
+  @ApiPropertyOptional({ enum: AuctionFormat, nullable: true })
   @IsOptional()
-  auctionFormat!: string;
-  @ApiProperty()
-  @IsString()
-  @MaxLength(100)
+  @IsEnum(AuctionFormat)
+  auctionFormat?: AuctionFormat | null;
+
+  @ApiPropertyOptional({ enum: AuctionMethod, nullable: true })
   @IsOptional()
-  auctionMethod!: string;
+  @IsEnum(AuctionMethod)
+  auctionMethod?: AuctionMethod | null;
   @ApiProperty() @Type(() => Number) @IsInt() @Min(1) contractId!: number;
 }

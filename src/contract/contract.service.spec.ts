@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { UploadFileServiceS3 } from '../file/upload-file.service';
 import { ContractService } from './contract.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Contract } from './entities/contract.entity';
@@ -13,6 +14,7 @@ describe('ContractService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ContractService,
+        { provide: UploadFileServiceS3, useValue: {} },
         ...[Contract, User, Property, ContractProperty].map((entity) => ({
           provide: getRepositoryToken(entity),
           useValue: {},

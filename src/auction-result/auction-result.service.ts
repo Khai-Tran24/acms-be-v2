@@ -3,6 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import {
+  contractAuctionTerms,
+  validateAuctionResult,
+} from '../shared/utils/auction-validation.util';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Contract } from '../contract/entities/contract.entity';
@@ -30,6 +34,7 @@ export class AuctionResultService {
         'Chỉ được tạo kết quả đấu giá cho hợp đồng có trạng thái "Đấu giá thành".',
       );
     }
+    validateAuctionResult(dto, contractAuctionTerms(contract));
     return this.repo.save(
       this.repo.create({
         ...data,
@@ -42,7 +47,9 @@ export class AuctionResultService {
   async findAll(query: QueryAuctionResultDto) {
     const builder = this.repo
       .createQueryBuilder('result')
-      .leftJoinAndSelect('result.contract', 'contract');
+      .leftJoinAndSelect('result.contract', 'contract')
+      .leftJoinAndSelect('contract.regulations', 'regulation')
+      .leftJoinAndSelect('contract.announcements', 'announcement');
     if (query.search)
       builder.andWhere(
         '(result.auction_result_number ILIKE :search OR CAST(result.winner AS text) ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_type ILIKE :search OR contract.contract_owner_type ILIKE :search)',
@@ -76,7 +83,7 @@ export class AuctionResultService {
       .take(query.limit)
       .getManyAndCount();
     return {
-      items,
+      items: items.map((item) => this.withStartingPrice(item)),
       pagination: {
         page: query.page,
         limit: query.limit,
@@ -88,7 +95,7 @@ export class AuctionResultService {
   async findOne(id: number) {
     const item = await this.findEntity(id);
     return {
-      ...item,
+      ...this.withStartingPrice(item),
       files: await this.fileService.activeFiles(
         FileEntityType.AUCTION_RESULT,
         id,
@@ -98,7 +105,7 @@ export class AuctionResultService {
   private async findEntity(id: number) {
     const item = await this.repo.findOne({
       where: { id },
-      relations: { contract: true },
+      relations: { contract: { regulations: true, announcements: true } },
     });
     if (!item) throw new NotFoundException('Auction result not found');
     return item;
@@ -106,10 +113,12 @@ export class AuctionResultService {
   async update(id: number, dto: UpdateAuctionResultDto) {
     const item = await this.findEntity(id);
     const { contractId, winningPrice, completedAt, ...data } = dto;
+    const contract = await this.contract(contractId ?? item.contract.id);
+    validateAuctionResult({ ...item, ...dto }, contractAuctionTerms(contract));
     Object.assign(item, data);
     if (winningPrice !== undefined) item.winningPrice = String(winningPrice);
     if (completedAt) item.completedAt = new Date(completedAt);
-    if (contractId) item.contract = await this.contract(contractId);
+    item.contract = contract;
     return this.repo.save(item);
   }
   async remove(id: number) {
@@ -119,9 +128,22 @@ export class AuctionResultService {
     return { message: 'Auction result deleted successfully' };
   }
   private async contract(id: number) {
-    const item = await this.contracts.findOneBy({ id });
+    const item = await this.contracts.findOne({
+      where: { id },
+      relations: { regulations: true, announcements: true },
+    });
     if (!item) throw new NotFoundException('Contract not found');
     return item;
+  }
+  private withStartingPrice(item: AuctionResult) {
+    const { regulations, announcements, ...contract } = item.contract;
+    return {
+      ...item,
+      contract,
+      startingPrice:
+        contractAuctionTerms({ ...contract, regulations, announcements })
+          .startingPrice ?? null,
+    };
   }
   private sortColumn(sortBy: QueryAuctionResultDto['sortBy']) {
     return (

@@ -51,7 +51,7 @@ export class AnnouncementService {
       .leftJoinAndSelect('announcement.contract', 'contract');
     if (query.search)
       builder.andWhere(
-        '(announcement.announcement_number ILIKE :search OR announcement.auction_format ILIKE :search OR announcement.auction_method ILIKE :search OR contract.contract_number ILIKE :search OR contract.contract_type ILIKE :search OR contract.contract_owner_type ILIKE :search)',
+        '(announcement.announcement_number ILIKE :search OR CAST(announcement.auction_format AS text) ILIKE :search OR CAST(announcement.auction_method AS text) ILIKE :search OR contract.contract_number ILIKE :search OR CAST(contract.contract_type AS text) ILIKE :search OR CAST(contract.contract_owner_type AS text) ILIKE :search)',
         { search: `%${query.search}%` },
       );
     if (query.announcementNumber)
@@ -60,12 +60,12 @@ export class AnnouncementService {
         { announcementNumber: `%${query.announcementNumber}%` },
       );
     if (query.auctionFormat)
-      builder.andWhere('announcement.auction_format ILIKE :auctionFormat', {
-        auctionFormat: `%${query.auctionFormat}%`,
+      builder.andWhere('announcement.auction_format = :auctionFormat', {
+        auctionFormat: query.auctionFormat,
       });
     if (query.auctionMethod)
-      builder.andWhere('announcement.auction_method ILIKE :auctionMethod', {
-        auctionMethod: `%${query.auctionMethod}%`,
+      builder.andWhere('announcement.auction_method = :auctionMethod', {
+        auctionMethod: query.auctionMethod,
       });
     if (query.contractId !== undefined)
       builder.andWhere('contract.id = :contractId', {
@@ -186,7 +186,6 @@ export class AnnouncementService {
         startRegisterDate: 'start_register_date',
         endRegisterDate: 'end_register_date',
         auctionDate: 'auction_date',
-        auctionTime: 'auction_time',
         createdAt: 'created_at',
         updatedAt: 'updated_at',
       } as const
